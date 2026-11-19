@@ -97,6 +97,7 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 ## Decided
 
 - Approach A (David, 2026-11-19).
+- ktau is a public repo under MIT, published as one fresh commit after a public-text review (David, 2026-11-19).
 - Ordinary sleep, not deep sleep, on nRF (David, 2026-11-19).
 - Android and rete's relay for the phone side (David, 2026-11-19).
 - Rung 7 starts as a small script: receive, speech-to-text, LLM, print or carry out a simple action. Real
