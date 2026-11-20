@@ -97,6 +97,8 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 ## Decided
 
 - Approach A (David, 2026-11-19).
+- Toit owns the IMU: Zephyr's `st,lsm6dsl` driver has no tap trigger, so tap setup is a Toit driver over one I2C
+  primitive (David, 2026-11-19; journal 03).
 - ktau is a public repo under MIT, published as one fresh commit after a public-text review (David, 2026-11-19).
 - Ordinary sleep, not deep sleep, on nRF (David, 2026-11-19).
 - Android and rete's relay for the phone side (David, 2026-11-19).
