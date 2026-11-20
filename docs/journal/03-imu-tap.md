@@ -47,7 +47,11 @@ the chip: six register writes set up the tap engine, over one generic I2C primit
    routing taps to INT1.
 4. **The IMU stays powered across a reflash** (its power switch, `pdm_imu_pwr`, is on from boot), so the C
    sample's settings survived into the Toit run. The driver starts with a software reset.
-5. **A container's file name must be a C identifier:** `rung3-probe.toit` broke the build, because ztoit uses
+5. **The wrong kind of device.** The code review found that `zephyr.I2c` accepted any device label and called
+   that device's driver as if it were I2C. A UART opened as I2C "read" `#[0x00]`. `Sensor` and `LedStrip` had the
+   same gap.
+   - **Fix:** all three now check the driver class (Zephyr's `DEVICE_API_IS`) and throw `WRONG_OBJECT_TYPE`.
+6. **A container's file name must be a C identifier:** `rung3-probe.toit` broke the build, because ztoit uses
    the name in generated C. Renamed to `rung3_probe.toit`. Filed for ztoit.
 
 ## Evidence
@@ -60,8 +64,9 @@ accel x:6.828517 ms/2 y:3.056830 ms/2 z:6.503093 ms/2
 loop:2 trig_cnt:211
 ```
 
-The Toit probe: `WHO_AM_I=0x6a`. With a wrong address (`0x6b`), Toit gets an exception, `I/O error`, not a
-hang.
+The Toit probe: `WHO_AM_I=0x6a`. With a wrong address (`0x6b`) the target doesn't answer, and Toit gets an
+exception, `I/O error`. A dead or stuck bus (the IMU unpowered) hasn't been tried. Zephyr's TWIM driver times out and
+returns an error, but the whole VM waits out that timeout.
 
 The demo, with the board lying on the bench: 5 sharp taps with slow spacing, then two quick pairs. The LED blinked
 once for each slow tap and once for each pair:
@@ -86,7 +91,7 @@ on port 0 with an interrupt, so it wakes the CPU from ordinary sleep. Rung 8 mea
 |---|---|---|
 | C sample `lsm6dsl` | 49632 B | 6952 B |
 | ztoit + `rung2.toit` (rung 2) | 260428 B | 114120 B |
-| ztoit + `rung3.toit` | 273612 B | 115632 B |
+| ztoit + `rung3.toit` | 273708 B | 115632 B |
 
 I2C, the input subsystem and device metadata add 1.5 KB of RAM over rung 2.
 
@@ -103,5 +108,6 @@ I2C, the input subsystem and device metadata add 1.5 KB of RAM over rung 2.
 - One I2C primitive, generic over any bus and target: Toit can't reach the bus without it.
 - Devicetree only for the interrupt: no new C, because `gpio-keys` already carries a pin's edges to Toit.
 
-None of it is specific to this IMU. The tap logic, the timings, and the fixes for ringing and start-up are all in
-Toit.
+The C is generic, not specific to this IMU. Two things are specific to the board and its IMU: the 1 ms debounce,
+which is set in the devicetree overlay because this IMU's tap pulse is so short, and the overlay's pin. The tap
+logic, the timings, and the fixes for ringing and start-up are all in Toit.
