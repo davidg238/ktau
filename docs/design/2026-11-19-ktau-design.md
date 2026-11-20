@@ -101,6 +101,11 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
   primitive (David, 2026-11-19; journal 03).
 - ktau is a public repo under MIT, published as one fresh commit after a public-text review (David, 2026-11-19).
 - Ordinary sleep, not deep sleep, on nRF (David, 2026-11-19).
+- Audio streams only after encoding: raw PCM is 256 kbit/s, so rung 4 buffers a clip and streaming starts with LC3
+  (rung 5) over BLE (rung 6) (David, 2026-11-19; journal 04).
+- Microphone gain is fixed at +10 dB; levels are evened out at the rung 7 receiver, not by gain control on the
+  device. Gain doesn't improve speech over noise at 1 m (David asked for the near/far measurement, 2026-11-19;
+  journal 04).
 - Android and rete's relay for the phone side (David, 2026-11-19).
 - Rung 7 starts as a small script: receive, speech-to-text, LLM, print or carry out a simple action. Real
   tool-calling comes later, if it earns its place (David, 2026-11-19).
