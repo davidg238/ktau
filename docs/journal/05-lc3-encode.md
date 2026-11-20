@@ -34,11 +34,18 @@ of our own (`c/lc3check`). Streaming over BLE is rung 6.
    size instead of failing, so the first range check could never fire. The break-check caught it (`--bitrate=1000`
    gave a working encoder).
    - **Fix:** the primitive checks the bit rate against liblc3's `LC3_MIN_BITRATE` and `LC3_MAX_BITRATE` itself.
+3. **An older encoder kept encoding after a newer one took over** (found in review). There is one encoder state, so
+   a second `Lc3Encoder` at 64 kbit/s made the first one return 80-byte frames while its `frame-bytes` still said 40.
+   - **Fix:** each setup gets a new generation; an older encoder's `encode` throws `ALREADY_CLOSED`, like a
+     microphone taken over by a new `start`.
 
 **What went into C this rung, and why:**
 - The codec. It is liblc3, as Zephyr ships it, and Toit calls it once per 100 ms block.
 - The encoder's state (2600 B), held static, like the microphone's block pool. There is one encoder; a new
-  `Lc3Encoder` resets it.
+  `Lc3Encoder` takes it over.
+- **Stack:** liblc3 used 3464 B of stack in the C check. A Toit interpreter thread has 8 KB, so the margin is
+  about 4.5 KB less the FPU's saved registers. Zephyr's stack guard would fault an overrun rather than let it
+  corrupt memory.
 
 ## Evidence
 
@@ -74,7 +81,7 @@ for a silent clip, so rung 7's receiver drops a clip whose no-speech probability
 |---|---|---|
 | C check `lc3check` (with a 32 KB sine buffer) | 137756 B | 53016 B |
 | ztoit + `rung4.toit` (rung 4) | 264504 B | 128464 B |
-| ztoit + `rung5.toit` | 360864 B | 131400 B |
+| ztoit + `rung5.toit` | 360912 B | 131400 B |
 
 liblc3 adds about 92 KB of flash. RAM grows by 2.9 KB, mostly the encoder state.
 
