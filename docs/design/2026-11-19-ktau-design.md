@@ -106,6 +106,11 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 - Microphone gain is fixed at +10 dB; levels are evened out at the rung 7 receiver, not by gain control on the
   device. Gain doesn't improve speech over noise at 1 m (David asked for the near/far measurement, 2026-11-19;
   journal 04).
+- Push to talk on the board's user button (`usr_btn`), with the LED lit while recording; the IMU tap is too easily
+  set off by handling and waits, perhaps as a double tap. For the demo the board is held at the mouth (David,
+  2026-11-20; journal 05).
+- The receiver (rung 7) drops a clip whose Whisper no-speech probability is high: Whisper writes "you" for silence
+  (journal 05).
 - Android and rete's relay for the phone side (David, 2026-11-19).
 - Rung 7 starts as a small script: receive, speech-to-text, LLM, print or carry out a simple action. Real
   tool-calling comes later, if it earns its place (David, 2026-11-19).
