@@ -15,7 +15,7 @@ microphone is the first check. The clip is held in memory and then printed on th
 - **Tokens (Claude Code):** 111 messages, 68 k output, 272 k cache-write, 15.8 M cache-read, from `tools/tokens.py
   2026-11-20T04:23:07Z 2026-11-20T05:21:34Z` (execution only).
 - **New in ztoit:**
-  - Three microphone primitives (93 lines of C): start (format and gain), read one block without waiting, and stop.
+  - Three microphone primitives (about 100 lines of C): start (format and gain), read one block without waiting, and stop.
     They work with any Zephyr `dmic` device found by its devicetree label.
   - `zephyr.Microphone` in Toit (42 lines): `start`, `read` (one 100 ms block), `stop`, and `--gain-db`.
   - Board conf: 2 settings (`CONFIG_AUDIO`, `CONFIG_AUDIO_DMIC`). No overlay change: the board already
@@ -41,6 +41,12 @@ microphone is the first check. The clip is held in memory and then printed on th
    type table, or `toit.compile` fails to link.
 7. **Handling the board counts as taps.** Picking it up gave 5 extra clips. Resting on the bench, it gave one clip
    per tap. Taps during recording and printing are cleared, not queued.
+
+8. **A new owner found the last one's leftovers.** The code review found that `start` didn't clean up after a
+   recording that ended without `stop` (a program that died, say). The next start had only 2 free blocks and stopped
+   after 3 of 15. Starting twice also broke the next read (3 of 5).
+   - **Fix:** `start` takes the microphone over: it stops whatever is running and frees every leftover block first,
+     and throws `MICROPHONE_BUSY` if the driver isn't ready within a second. Rerun: 15 of 15, and 5 of 5.
 
 ## Evidence
 
