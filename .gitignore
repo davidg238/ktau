@@ -1,2 +1,4 @@
 .superpowers/
 .private/
+samples/
+tools/__pycache__/
