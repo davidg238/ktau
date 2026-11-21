@@ -1,4 +1,4 @@
-# Push to talk, from Toit on Zephyr, to an LLM on my tailnet
+# Push to talk: Toit > tailnet > LLM and back
 
 Draft, 2026-11-21. Raw material: `docs/journal/01`–`07`.
 
