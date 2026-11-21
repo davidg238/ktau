@@ -9,28 +9,25 @@ is 62 lines of [Toit](https://toitlang.org), running on Zephyr through [ztoit](h
 ## The chain
 
 ```
-button      held: LED on, recording
-  │
-PDM mic     Zephyr's dmic driver
-  │         a block every 100 ms
-LC3         liblc3: 400 B a block
-  │
-UDP/BLE     one L2CAP channel
-  │
-Pixel       rete's Android relay
-  │
-Tailscale
-  │
-receiver    Python, on the tailnet
-  │
-Whisper     speech to text
-  │
-LLM         note / say / none
-  │
-reply       one byte, back the
-  │         same way
-LED         2 short: acted
-            1 long: not acted
+ nRF54L15 │ button      │  LED
+ (Toit)   │   ↓         │   ▲
+          │ PDM mic     │   │
+          │   ↓         │   │
+          │ LC3         │   │
+          │   ↓         │   │
+          │ UDP/BLE     │   │
+──────────┼─────────────┼───┼───────
+ tailnet  │ Pixel       │   │
+          │   ↓         │   │
+          │ Tailscale   │   │
+          │   ↓         │   │
+          │ receiver    │   │
+──────────┼─────────────┼───┼───────
+ server   │ Whisper     │   │
+          │   ↓         │   │
+          │ LLM         │   │
+          │   ↓         │   │
+          │ reply ──────┼───┘ one byte
 ```
 
 - **On the board:** push to talk. While the button is held the LED is lit, and each 100 ms block of audio is encoded
