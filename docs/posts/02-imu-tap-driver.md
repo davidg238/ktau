@@ -47,3 +47,5 @@ timings and the fixes for ringing and start-up, is all in Toit.
 Use Zephyr's driver when it does what you need: the microphone's `dmic` driver did, and Toit wraps it in three
 primitives. Write the driver in Toit when Zephyr's driver lacks the feature, as here. Then C only has to provide the
 bus, and the chip-specific logic stays in a language where an error is an exception.
+
+The driver (`app/lsm6ds3.toit`) and the journal entry are in [ktau](https://github.com/davidg238/ktau); the I2C primitive is in [ztoit](https://github.com/davidg238/ztoit).

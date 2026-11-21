@@ -18,7 +18,7 @@ LED ◀────────────────────────�
 
 - **On the board:** push to talk. While the button is held the LED is lit, and each 100 ms block of audio is encoded
   to 400 B of LC3 and sent as one datagram. On release it sends an END and waits up to 30 s for a one-byte reply.
-- **The phone:** an existing Android app holds a bonded BLE link to the board and forwards its datagrams onto the
+- **The phone:** [rete](https://github.com/davidg238/rete)'s Android relay app holds a bonded BLE link to the board and forwards its datagrams onto the
   tailnet. To the board it is just a network.
 - **The receiver:** about 200 lines of Python on a machine on the tailnet. It reassembles the clip, evens out the
   level, transcribes it, asks the LLM to pick one action from an allowlist (`note`, `say`, `none`), carries it out,
@@ -67,7 +67,7 @@ same as a Bluetooth headset in a quiet room: 5/5 transcripts.
 
 ### UDP over Bluetooth LE
 
-This was the hardest rung. The BLE transport came from another project of mine, written in C. `udp_ble.cc` puts
+This was the hardest rung. The BLE transport came from [rete](https://github.com/davidg238/rete), my embedded fleet system, written in C. `udp_ble.cc` puts
 Toit's ordinary `udp` primitives on top of it, beside the existing ones for Wi-Fi and Thread, so a Toit program can't
 tell which link it has. What broke:
 
