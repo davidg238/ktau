@@ -8,7 +8,7 @@ is 62 lines of [Toit](https://toitlang.org), running on Zephyr through [ztoit](h
 
 ## The chain
 
-```
+```text
  nRF54L15 │ button      held: LED on, record   │  LED
  (Toit)   │   ↓                                │   ▲  2 short: acted
           │ PDM mic     Zephyr's dmic driver   │   │  1 long: not acted
