@@ -7,11 +7,12 @@ ECHO-HOST ::= "fd7a:115c:a1e0::bf01:d921"  // gw85224-01 on the tailnet.
 ECHO-PORT ::= 7777
 TIMEOUT-MS ::= 3_000
 MAX-DATAGRAM ::= 1280  // udp_ble.cc, as udp_zephyr.cc.
+PATH-MAX ::= 1232      // Tailscale MTU 1280 less IPv6 and UDP headers: the most the echo path carries.
 
 target ::= net.SocketAddress (net.IpAddress.parse ECHO-HOST) ECHO-PORT
 
 check name/string [block] -> none:
-  why := catch: block.call
+  why := catch --trace: block.call
   if why: print "FAIL $name: $why"
   else: print "PASS $name"
 
@@ -51,7 +52,7 @@ main:
         error := catch: socket.send (udp.Datagram (ByteArray MAX-DATAGRAM + 1) target)
         if not error: throw "a $(MAX-DATAGRAM + 1) B datagram was accepted"
         print "  $(MAX-DATAGRAM + 1) B: $error"
-        echo socket (ByteArray MAX-DATAGRAM: it & 0xff)
+        echo socket (ByteArray PATH-MAX: it & 0xff)
       finally:
         socket.close
   finally:
