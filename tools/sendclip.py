@@ -16,7 +16,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', 'server'))
 import clips  # noqa: E402
 
-STATUS = {clips.ACTED: 'ACTED', clips.NO_SPEECH: 'NO-SPEECH', clips.FAILED: 'FAILED'}
+STATUS = {clips.ACTED: 'ACTED', clips.NO_SPEECH: 'NO-SPEECH', clips.FAILED: 'FAILED', clips.REFUSED: 'REFUSED'}
 
 
 def encode(path):

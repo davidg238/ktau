@@ -18,7 +18,7 @@ RATE, FRAME_US, FRAME_BYTES = 16000, 10000, 40   # rung 5's Lc3Encoder.
 BLOCK_SAMPLES = RATE // 10                        # 100 ms per datagram.
 PEAK = 0.9          # Levels are evened out here, not by device gain (design, Decided).
 NO_SPEECH = 0.6     # Whisper scored silence ≈ 0.9 (journal 05).
-STATUS = {clips.ACTED: 'ACTED', clips.NO_SPEECH: 'NO-SPEECH', clips.FAILED: 'FAILED'}
+STATUS = {clips.ACTED: 'ACTED', clips.NO_SPEECH: 'NO-SPEECH', clips.FAILED: 'FAILED', clips.REFUSED: 'REFUSED'}
 
 
 def decode_clip(frames):
@@ -73,6 +73,8 @@ def handle(clip, stt, llm, notes):
         action, said = act.parse(answer)
         line += ' | llm %.1f s %s "%s"' % (time.monotonic() - t, action, said)
         act.run(action, said, notes)
+        if action == 'none':
+            return clips.REFUSED, line  # Nothing was done: the board's long blink, not "done" (David, 2026-11-21).
     except Exception as e:  # noqa: BLE001 - one bad clip must not stop the receiver.
         return clips.FAILED, line + ' | %s %.1f s error: %s: %s' % (stage, time.monotonic() - t, type(e).__name__, e)
     return clips.ACTED, line

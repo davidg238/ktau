@@ -1,12 +1,12 @@
 """Reassembles the clips a ktau device streams, and the bytes of its wire (rung 7).
 
 Big-endian. audio: clip:u16 | seq:u16 | 400 B of LC3 (one 100 ms block, seq from 0).
-end: clip:u16 | 0xFFFF | blocks:u16 (sent 3 times). reply: clip:u16 | status:u8.
+end: clip:u16 | 0xFFFF | blocks:u16 (sent 3 times). reply: clip:u16 | status:u8 (0 acted, 1 no speech, 2 failed, 3 refused: the LLM chose `none`).
 A clip finishes on its END, when the same source starts another clip, or after `idle_s` with nothing new.
 """
 import collections, struct
 
-ACTED, NO_SPEECH, FAILED = 0, 1, 2
+ACTED, NO_SPEECH, FAILED, REFUSED = 0, 1, 2, 3
 BLOCK_BYTES = 400   # 10 LC3 frames of 40 B: 100 ms at 16 kHz, 32 kbit/s (rung 5).
 MAX_BLOCKS = 100    # The device stops at 50 (5 s); this is the guard.
 END_SEQ = 0xFFFF

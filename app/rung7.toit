@@ -2,11 +2,11 @@
 // the LED is lit while recording, and each 100 ms block is LC3-encoded and sent as one
 // datagram through the Pixel's BLE relay. On release, an END (3 times). The receiver
 // (server/receiver.py) transcribes it, asks the LLM for an action, runs it and replies;
-// the LED answers: 2 short blinks acted, 1 long not understood, 5 fast no reply.
+// the LED answers: 2 short blinks acted, 1 long not done (no speech, failed, or refused), 5 fast no reply.
 //
 // The wire (server/clips.py), big-endian:
 //   audio: clip:u16 | seq:u16 | 400 B LC3    end: clip:u16 | 0xFFFF | blocks:u16
-//   reply: clip:u16 | status:u8 (0 acted, 1 no speech, 2 failed)
+//   reply: clip:u16 | status:u8 (0 acted, 1 no speech, 2 failed, 3 refused)
 import net
 import net.udp
 import zephyr

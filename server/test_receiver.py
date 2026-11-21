@@ -1,7 +1,7 @@
 """Tests for receiver.py's audio path: run with `python3 -m unittest server/test_receiver.py` from the repo root.
 
 Needs the host liblc3 (see tools/lc3dec.py)."""
-import math, os, struct, sys, unittest
+import math, os, struct, sys, tempfile, unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -50,6 +50,19 @@ class ReceiverHandleTest(unittest.TestCase):
         status, line = self.handle(lambda s: ('hello', 0.1), None)
         self.assertEqual(status, clips.FAILED)
         self.assertIn('error', line)
+
+    def test_none_is_refused(self):
+        status, line = self.handle(lambda s: ('turn on the lights', 0.1), '{"action":"none","text":"I cannot."}')
+        self.assertEqual(status, clips.REFUSED)
+
+    def test_note_is_acted(self):
+        with tempfile.TemporaryDirectory() as d:
+            stub = Stub('{"action":"note","text":"milk"}')
+            try:
+                status, _ = receiver.handle(self.clip, lambda s: ('note milk', 0.1), stub.url, d + '/notes.txt')
+            finally:
+                stub.close()
+        self.assertEqual(status, clips.ACTED)
 
     def test_stt_error_fails(self):
         def stt(samples):

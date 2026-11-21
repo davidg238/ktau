@@ -36,13 +36,13 @@ UDP, big-endian, one datagram per 100 ms of audio (400 B of LC3 at 32 kbit/s, ru
 |---|---|
 | audio | `clip:u16 \| seq:u16 \| 400 B LC3` |
 | end | `clip:u16 \| 0xFFFF \| blocks:u16`, sent 3 times, 50 ms apart |
-| reply | `clip:u16 \| status:u8`: 0 acted, 1 no speech, 2 failed |
+| reply | `clip:u16 \| status:u8`: 0 acted, 1 no speech, 2 failed, 3 refused (the LLM chose `none`) |
 
 A clip ends on its END, when the same sender starts another clip, or after 1.5 s of silence (all three ENDs lost).
 A lost block becomes 100 ms of silence. The board starts its clip numbers at random, so a reboot doesn't reuse a
 number the receiver has just finished.
 
-The LED, the board's only user LED: lit while recording; 2 short blinks acted; 1 long blink no speech or failed; 5
+The LED, the board's only user LED: lit while recording; 2 short blinks acted; 1 long blink no speech, failed, or refused; 5
 fast blinks no reply in 30 s.
 
 ## What broke
@@ -51,6 +51,11 @@ fast blinks no reply in 30 s.
    recipe had it in the shell already. Not a code change, but a missing line in the recipe.
 2. **The plan had a wrong number:** a lost block's silence as "320 samples a frame". A 10 ms frame at 16 kHz is 160
    samples; a lost block is 1600. The test caught it before any code was written.
+
+3. **A refusal blinked as done.** The review found that "I cannot control the lights" (`none`) replied *acted*, so
+   the board gave 2 short blinks. A refusal now replies 3, *refused*, and gets the long blink (David, 2026-11-21).
+   The board needed no change: any status but 0 is the long blink. The review also found that a null answer from
+   the LLM, or a Whisper error, would have stopped the receiver; now one bad clip replies *failed*.
 
 Nothing broke on the board or the relay.
 
@@ -73,7 +78,7 @@ Then the bench (2026-11-21 14:04), the board held at the mouth:
 clip 827 from …: 25 blocks (0 lost) | stt 2.7 s "Remind me to buy milk." nsp=0.03 | llm 0.4 s note "Buy milk" | ACTED
 clip 828 from …: 40 blocks (0 lost) | stt 2.9 s "Note that the boiler service is due Tuesday" nsp=0.01 | llm 0.4 s note "Boiler service is due Tuesday" | ACTED
 clip 829 from …: 28 blocks (0 lost) | stt 2.6 s "Say hello to David." nsp=0.02 | llm 0.3 s say "Hello, David!" | ACTED
-clip 830 from …: 28 blocks (0 lost) | stt 2.6 s "turn on the kitchen lights" nsp=0.02 | llm 0.4 s none "I cannot control the lights." | ACTED
+clip 830 from …: 28 blocks (0 lost) | stt 2.6 s "turn on the kitchen lights" nsp=0.02 | llm 0.4 s none "I cannot control the lights." | ACTED (now REFUSED)
 clip 831 from …: 31 blocks (0 lost) | stt 2.7 s "" nsp=1.00 | NO-SPEECH
 ```
 
