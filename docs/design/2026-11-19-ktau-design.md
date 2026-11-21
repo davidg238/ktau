@@ -48,7 +48,7 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 
 - **Power:** the first prototype uses two AAA cells in series (David, 2026-11-19); AAAA is the later, smaller option. Either way it is 3.0 V falling to about 2.0 V, fed to the 3V3 pin. A CR2032 can't supply the
   burst current for audio, and one AAAA is below the nRF54L15's 1.7 V minimum without a boost converter.
-  - Must be verified at rung 8: that the microphone and IMU run down to 2.0 V, and that feeding 3V3 does not
+  - Out of scope since 2026-11-21 (ktau ends at rung 7); left for a battery-powered build: that the microphone and IMU run down to 2.0 V, and that feeding 3V3 does not
     back-power the XIAO's regulator or charger.
 - **Zephyr:** ztoit's tree (`~/zephyr-esp32/zephyr`, Zephyr 4.2) supports the nRF54L15 SoC (`nrf54l15dk`) but has
   no `xiao_nrf54l15` board, although later Zephyr has one upstream (`boards/seeed/xiao_nrf54l15`,
@@ -83,7 +83,7 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 | 5 | LC3 encode primitive (Zephyr `liblc3`); clip size and encode time measured | ztoit primitive |
 | 6 | ztoit `net.udp` over `udp_ble.c` through the Pixel relay; echo to a tailnet host | ztoit (network seam) |
 | 7 | Tailnet receiver → speech-to-text → LLM → action | ktau server |
-| 8 | Battery: current measured in sleep and per instruction; lifetime estimate | ktau journal |
+| 8 | ~~Battery: current measured in sleep and per instruction; lifetime estimate~~ Out of scope: ktau ends at rung 7 (Decided, 2026-11-21) | — |
 
 ## Where things live
 
@@ -112,6 +112,9 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 - The receiver (rung 7) drops a clip whose Whisper no-speech probability is high: Whisper writes "you" for silence
   (journal 05).
 - Android and rete's relay for the phone side (David, 2026-11-19).
+- ktau ends at rung 7 as a demonstration: push to talk over BLE and Tailscale to an LLM on the tailnet. Battery
+  (rung 8) is out of scope. Two posts in `docs/posts/`: the push-to-talk chain (with the Zephyr 4.2 → 4.5 move), and
+  the IMU driver in Toit against Zephyr's (David, 2026-11-21).
 - Rung 7 starts as a small script: receive, speech-to-text, LLM, print or carry out a simple action. Real
   tool-calling comes later, if it earns its place (David, 2026-11-19).
 - The blog and journal are public, so the public-text rules apply (David, 2026-11-19).
@@ -127,7 +130,7 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 ## Calls made in the design (Claude, 2026-11-19; David to check)
 
 - **The BLE link stays up while the device sleeps.** This makes tap-to-first-datagram fast and matches how the rete
-  relay holds its link. Rung 8 measures the cost of the connection interval. Dropping the link and reconnecting on a
+  relay holds its link. The cost of the connection interval is unmeasured: ktau runs on USB. Dropping the link and reconnecting on a
   tap is the fallback, if the measurements say so.
 - **A RAM shortfall at rung 2 is a finding, not a reason to stop.** It is journalled, then trimmed (VM heap, BT
   buffers). The board stays the XIAO: moving to the C6 would defeat the purpose.
