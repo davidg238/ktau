@@ -1,9 +1,8 @@
 # Focus
 
-- **Done as a demonstration (2026-11-21):** ktau ends at rung 7. Battery (rung 8) is out of scope (design doc,
-  Decided). Two post drafts in `docs/posts/` await David's review; nothing is pushed until he has read them.
-- **Next session starts with:** David's edits to `docs/posts/01-push-to-talk.md` and `02-imu-tap-driver.md`, then
-  the public-text check and push.
+- **Done (2026-11-21):** ktau ends at rung 7 as a demonstration; battery is out of scope (design doc, Decided).
+  Both posts are published on ekorau.com (`docs/posts/` is their source; edit there and in the site together).
+- **Next session:** none planned. Open minors only; ztoit's focus is #47.
 - **Bench state:** the XIAO runs `~/zephyr-4.5/build-rung7` (build needs `source ~/workspace/ztoit/env.sh`), bonded
   to the Pixel. Receiver: `uv run -q --with faster-whisper --with numpy python -I server/receiver.py` on msi (port
   7700); the LLM is `http://z170:8080`.
