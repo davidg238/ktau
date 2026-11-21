@@ -20,23 +20,22 @@ is 62 lines of [Toit](https://toitlang.org), running on Zephyr through [ztoit](h
  tailnet  │ Pixel       rete's Android relay   │   │
           │   ↓                                │   │
           │ Tailscale                          │   │
-          │   ↓                                │   │
-          │ receiver    reassembles the clip   │   │
 ──────────┼────────────────────────────────────┼───┼──────────────────
- server   │ Whisper     speech to text         │   │
+ server   │ receiver    reassembles the clip   │   │
           │   ↓                                │   │
-          │ LLM         note / say / none      │   │
+          │ Whisper     speech to text         │   │
+          │   ↓                                │   │
+          │ LLM         on another tailnet     │   │
+          │             host: note/say/none    │   │
           │   ↓                                │   │
           │ reply ─────────────────────────────┼───┘ one byte
 ```
 
-- **On the board:** push to talk. While the button is held the LED is lit, and each 100 ms block of audio is encoded
-  to 400 B of LC3 and sent as one datagram. On release it sends an END and waits up to 30 s for a one-byte reply.
-- **The phone:** [rete](https://github.com/davidg238/rete)'s Android relay app holds a bonded BLE link to the board and forwards its datagrams onto the
-  tailnet. To the board it is just a network.
-- **The receiver:** about 200 lines of Python on a machine on the tailnet. It reassembles the clip, evens out the
-  level, transcribes it, asks the LLM to pick one action from an allowlist (`note`, `say`, `none`), carries it out,
-  and replies.
+- **The board** sends an END on release, then waits up to 30 s for the reply; no reply is 5 fast blinks.
+- **The relay** holds a bonded link to the board and puts its datagrams on the tailnet. To the board it is just a
+  network.
+- **The receiver** is about 200 lines of Python. It evens out the level before Whisper, and the LLM may only pick
+  from an allowlist of actions: `note`, `say` or `none`.
 
 At the bench: 4 of 4 phrases acted as meant, a silent clip answered "no speech", and with the receiver stopped the
 board gave up after 30 s and carried on. No audio block was lost. Release to blink took 2.9–3.3 s, and 2.7 s of
