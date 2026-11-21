@@ -42,9 +42,6 @@ The task blocks, Zephyr's idle thread runs, and the pin's interrupt wakes the CP
 The C that went in is generic: an I2C primitive and a pin. What is specific to this chip, the register settings, the
 timings and the fixes for ringing and start-up, is all in Toit.
 
-Tap-to-talk didn't survive: handling the board set off taps, and the threshold was already as low as it goes, so the
-demo moved to the button. The driver stays, perhaps for a double tap.
-
 ## When to write the driver in Toit
 
 Use Zephyr's driver when it does what you need: the microphone's `dmic` driver did, and Toit wraps it in three
