@@ -1,8 +1,9 @@
 # Focus
 
-- **Next session starts with (Opus):** rung 6, ztoit `net.udp` over rete's BLE relay; an echo from a tailnet host
-  (ztoit #41). First: write its plan with superpowers:writing-plans from the design doc's rung 6. Rung 5 is done
-  (`docs/journal/05-lc3-encode.md`): push to talk, LC3 at 32 kbit/s, 5/5 phrases through Whisper.
+- **Next session starts with (Opus):** rung 7, the receiver on the tailnet: LC3 clips over the BLE relay →
+  Whisper → LLM (ztoit #41). First: write its plan with superpowers:writing-plans from the design doc's rung 7.
+  Rung 6 is done (`docs/journal/06-udp-over-ble.md`): pings 20/20, stream 50/50 at 100 ms, a 10 s relay outage
+  loses only its own datagrams. The XIAO runs `~/zephyr-4.5/build-rung6-demo`, bonded to the Pixel.
 - **Repo:** public at github.com/davidg238/ktau (MIT); the pre-publication history is the local branch `private-history`, never pushed.
   `samples/` (David's recordings) is git-ignored; host liblc3 for `tools/lc3dec.py` is `~/.local/lib/ktau/liblc3.so`.
 - **Open:** #1 (P3) lsm6ds3 driver cleanup; #2 clip2wav; #3 (P3) two-mic boom/glasses idea; #4 (P3) rung 5 review minors.
