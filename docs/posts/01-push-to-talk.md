@@ -1,4 +1,4 @@
-# Push to talk: Toit on Zephyr → tailnet → LLM, and back
+# Push to talk: Toit on Zephyr → tailnet → LLM & back
 
 Draft, 2026-11-21. Raw material: `docs/journal/01`–`07`.
 
