@@ -118,6 +118,11 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 - Zephyr: upgrade rather than backport. A new Zephyr release goes in a separate west workspace, so ztoit's working
   boards stay on 4.2 until they're re-proven there (David asked "why not upgrade", 2026-11-19).
 - First prototype: two AAA cells in an enclosure David has (David, 2026-11-19); still to confirm with the 2.0 V check.
+- Rung 7's receiver runs on msi; the LLM is the llama.cpp server on the z170, served to the tailnet with
+  `tailscale serve` (David, 2026-11-21; journal 07). Headless Claude stays an option for later.
+- Rung 7's action is a JSON pick from an allowlist (`note`, `say`, `none`) plus a reply to the board; the one user LED
+  answers: 2 short blinks done, 1 long blink not done, a refusal included (David, 2026-11-21; journal 07).
+- The audio wire, one datagram per 100 ms block with an END sent 3 times, is in `server/clips.py` (journal 07).
 
 ## Calls made in the design (Claude, 2026-11-19; David to check)
 
