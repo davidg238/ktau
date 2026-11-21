@@ -54,4 +54,4 @@ def run(action, text, notes_path, say=_say):
         with open(notes_path, 'a') as f:
             f.write('%s %s\n' % (datetime.datetime.now().isoformat(timespec='seconds'), text))
     elif action == 'say':
-        say(['spd-say', text])
+        say(['spd-say', '--', text])  # '--': the text can't be read as an option.

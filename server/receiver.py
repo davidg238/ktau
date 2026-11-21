@@ -58,22 +58,23 @@ class Whisper:
 
 
 def handle(clip, stt, llm, notes):
-    """Returns (status, the line to print)."""
+    """Returns (status, the line to print). Any error in one clip is FAILED, so the receiver keeps running."""
     lost = sum(f is None for f in clip.frames)
     line = 'clip %d from %s: %d blocks (%d lost)' % (clip.clip_id, clip.src[0], len(clip.frames), lost)
     t = time.monotonic()
-    text, nsp = stt(normalise(decode_clip(clip.frames)))
-    line += ' | stt %.1f s "%s" nsp=%.2f' % (time.monotonic() - t, text, nsp)
-    if not text or nsp >= NO_SPEECH:
-        return clips.NO_SPEECH, line
-    t = time.monotonic()
+    stage = 'stt'
     try:
+        text, nsp = stt(normalise(decode_clip(clip.frames)))
+        line += ' | stt %.1f s "%s" nsp=%.2f' % (time.monotonic() - t, text, nsp)
+        if not text or nsp >= NO_SPEECH:
+            return clips.NO_SPEECH, line
+        t, stage = time.monotonic(), 'llm'
         answer = act.ask(text, llm)
         action, said = act.parse(answer)
         line += ' | llm %.1f s %s "%s"' % (time.monotonic() - t, action, said)
         act.run(action, said, notes)
-    except (OSError, ValueError, KeyError, act.subprocess.SubprocessError) as e:
-        return clips.FAILED, line + ' | llm %.1f s error: %s' % (time.monotonic() - t, e)
+    except Exception as e:  # noqa: BLE001 - one bad clip must not stop the receiver.
+        return clips.FAILED, line + ' | %s %.1f s error: %s: %s' % (stage, time.monotonic() - t, type(e).__name__, e)
     return clips.ACTED, line
 
 
@@ -101,7 +102,10 @@ def main():
         for clip in done + asm.expire(time.monotonic()):
             status, line = handle(clip, stt, a.llm, a.notes)
             print('%s | %s' % (line, STATUS[status]), flush=True)
-            sock.sendto(clips.encode_reply(clip.clip_id, status), clip.src)
+            try:
+                sock.sendto(clips.encode_reply(clip.clip_id, status), clip.src)
+            except OSError as e:
+                print('clip %d: reply not sent: %s' % (clip.clip_id, e), flush=True)
 
 
 if __name__ == '__main__':

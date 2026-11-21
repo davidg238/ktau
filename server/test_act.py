@@ -66,7 +66,7 @@ class ActTest(unittest.TestCase):
             act.run('say', 'hi', path, say=calls.append)
             act.run('none', 'it is noon', path, say=calls.append)
             self.assertFalse(os.path.exists(path))
-        self.assertEqual(calls, [['spd-say', 'hi']])
+        self.assertEqual(calls, [['spd-say', '--', 'hi']])
 
     def test_ask_body(self):
         stub = Stub('{"action":"note","text":"milk"}')

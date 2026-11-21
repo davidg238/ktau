@@ -6,8 +6,9 @@ import math, os, struct, sys, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
-import lc3dec  # noqa: E402
+import clips, lc3dec  # noqa: E402
 import receiver  # noqa: E402
+from test_act import Stub  # noqa: E402
 
 
 def sine_block(hz, amp):
@@ -32,6 +33,30 @@ class ReceiverAudioTest(unittest.TestCase):
 
     def test_normalise_silence_stays_silent(self):
         self.assertEqual(list(receiver.normalise(receiver.decode_clip([None, None]))), [0.0] * 3200)
+
+
+class ReceiverHandleTest(unittest.TestCase):
+    """Whatever goes wrong with one clip, handle() replies FAILED and the receiver lives on."""
+    clip = clips.Clip(('::1', 1, 0, 0), 7, [None])
+
+    def handle(self, stt, content):
+        stub = Stub(content)
+        try:
+            return receiver.handle(self.clip, stt, stub.url, '/nonexistent/notes.txt')
+        finally:
+            stub.close()
+
+    def test_llm_null_content_fails(self):
+        status, line = self.handle(lambda s: ('hello', 0.1), None)
+        self.assertEqual(status, clips.FAILED)
+        self.assertIn('error', line)
+
+    def test_stt_error_fails(self):
+        def stt(samples):
+            raise RuntimeError('whisper broke')
+        status, line = self.handle(stt, '{"action":"none","text":"x"}')
+        self.assertEqual(status, clips.FAILED)
+        self.assertIn('whisper broke', line)
 
 
 if __name__ == '__main__':
