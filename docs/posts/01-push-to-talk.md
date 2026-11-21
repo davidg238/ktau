@@ -9,25 +9,25 @@ is 62 lines of [Toit](https://toitlang.org), running on Zephyr through [ztoit](h
 ## The chain
 
 ```
- nRF54L15 │ button      │  LED
- (Toit)   │   ↓         │   ▲
-          │ PDM mic     │   │
-          │   ↓         │   │
-          │ LC3         │   │
-          │   ↓         │   │
-          │ UDP/BLE     │   │
-──────────┼─────────────┼───┼───────
- tailnet  │ Pixel       │   │
-          │   ↓         │   │
-          │ Tailscale   │   │
-          │   ↓         │   │
-          │ receiver    │   │
-──────────┼─────────────┼───┼───────
- server   │ Whisper     │   │
-          │   ↓         │   │
-          │ LLM         │   │
-          │   ↓         │   │
-          │ reply ──────┼───┘ one byte
+ nRF54L15 │ button      held: LED on, record   │  LED
+ (Toit)   │   ↓                                │   ▲  2 short: acted
+          │ PDM mic     Zephyr's dmic driver   │   │  1 long: not acted
+          │   ↓         a block every 100 ms   │   │
+          │ LC3         liblc3: 400 B a block  │   │
+          │   ↓                                │   │
+          │ UDP/BLE     one L2CAP channel      │   │
+──────────┼────────────────────────────────────┼───┼──────────────────
+ tailnet  │ Pixel       rete's Android relay   │   │
+          │   ↓                                │   │
+          │ Tailscale                          │   │
+          │   ↓                                │   │
+          │ receiver    reassembles the clip   │   │
+──────────┼────────────────────────────────────┼───┼──────────────────
+ server   │ Whisper     speech to text         │   │
+          │   ↓                                │   │
+          │ LLM         note / say / none      │   │
+          │   ↓                                │   │
+          │ reply ─────────────────────────────┼───┘ one byte
 ```
 
 - **On the board:** push to talk. While the button is held the LED is lit, and each 100 ms block of audio is encoded
