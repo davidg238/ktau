@@ -6,6 +6,23 @@ Hold the button on a thumb-sized board and say "remind me to buy milk". About th
 LED blinks twice and the note is on a machine at home. The board is a Seeed XIAO nRF54L15 Sense. The program on it
 is 62 lines of [Toit](https://toitlang.org), running on Zephyr through [ztoit](https://github.com/davidg238/ztoit).
 
+## The architecture
+
+A small battery device can't run a VPN, and shouldn't need to know where its servers are. So the network here has
+two hops:
+
+- **Local:** the device only talks to something nearby. In this demo that is a phone, over a bonded Bluetooth LE
+  link: a personal area network of one. On Wi-Fi or Thread, a Tailscale subnet router on the LAN would play the
+  phone's part.
+- **Remote:** [Tailscale](https://tailscale.com) takes it from there. The phone is on the tailnet, so a datagram
+  from the board reaches the receiver at its tailnet address, wherever that machine is, with no open ports, no
+  public addresses and no port forwarding, encrypted with WireGuard between the phone and the server. The phone can
+  move between Wi-Fi and cellular, and the tailnet path moves with it.
+
+The board knows none of this. It holds no Tailscale keys and runs no WireGuard: it sends UDP to an IPv6 address, and
+the phone's relay puts it on the tailnet. The LLM is on yet another machine, published to the tailnet with
+`tailscale serve`, so the receiver reaches it by name.
+
 ## The chain
 
 ```text
