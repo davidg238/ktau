@@ -8,8 +8,10 @@ is 62 lines of [Toit](https://toitlang.org), running on Zephyr through [ztoit](h
 
 ## The architecture
 
-A small battery device can't run a VPN, and shouldn't need to know where its servers are. So the network here has
-two hops:
+WireGuard has been run on microcontrollers, but a persistent VPN rarely suits a battery device: NAT keepalives cost
+energy, the tunnel's headers crowd small radio frames, and a device that sleeps past WireGuard's two-minute rekey
+redoes the handshake on every wake. A device also shouldn't need to know where its servers are. So the network here
+has two hops:
 
 - **Local:** the device only talks to something nearby. In this demo that is a phone, over a bonded Bluetooth LE
   link: a personal area network of one. On Wi-Fi or Thread, a Tailscale subnet router on the LAN would play the
@@ -21,7 +23,8 @@ two hops:
 
 The board knows none of this. It holds no Tailscale keys and runs no WireGuard: it sends UDP to an IPv6 address, and
 the phone's relay puts it on the tailnet. The LLM is on yet another machine, published to the tailnet with
-`tailscale serve`, so the receiver reaches it by name.
+`tailscale serve`, so the receiver reaches it by name. What this does and doesn't protect is set out
+[below](#security-what-is-and-isnt-protected).
 
 ## The chain
 
@@ -144,6 +147,24 @@ Bluetooth 194 KB.
 
 The whole ladder, from an unopened board to this demo, took three days (2026-11-19 to 2026-11-21), with
 Claude Code doing the typing: 7 rungs, each with a plan, a demo, a journal entry and a review.
+
+## Security: what is and isn't protected
+
+This is a demonstration, and not every hop is secure:
+
+| Hop | Protection | Gap |
+|---|---|---|
+| Board to phone | Bluetooth LE Secure Connections; the channel requires an encrypted link, and the board accepts only the phone it bonded with | Pairing is Just Works: the first phone to pair is trusted, with no passkey, so pairing is open to a man in the middle at that moment |
+| Phone (relay) | none of its own | The relay app sees the audio in the clear |
+| Phone to receiver | Tailscale: WireGuard, and only tailnet devices can reach the receiver | none on the path |
+| Receiver | The LLM may only pick `note`, `say` or `none` | It accepts a clip from any tailnet device; there is no check that it came from this board |
+| Receiver to LLM | Tailscale (`tailscale serve`) | The LLM is open to the whole tailnet |
+
+So nothing protects the audio end to end, from the board to the receiver. The usual way to add that on constrained
+devices works above the network layer: OSCORE (RFC 8613) protects CoAP messages with about 11–13 bytes of overhead
+and passes through proxies and sleep cycles, and DTLS with Connection IDs (RFC 9146, built into DTLS 1.3) survives a
+NAT rebinding without keepalives. Either would close the gap between the board and the receiver, and make the relay
+a carrier that can't read what it carries; Tailscale would still carry the traffic.
 
 ## Not in this demo
 
