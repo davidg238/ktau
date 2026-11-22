@@ -2,16 +2,17 @@
 
 Draft, 2026-11-21. Raw material: `docs/journal/01`–`07`.
 
-Hold the button on a thumb-sized board and say "remind me to buy milk". About three seconds after you let go, the
-LED blinks twice and the note is on a machine at home. The board is a Seeed XIAO nRF54L15 Sense. The program on it
-is 62 lines of [Toit](https://toitlang.org), running on Zephyr through [ztoit](https://github.com/davidg238/ztoit).
+This is a demonstration: an off-the-shelf Seeed Studio module, the thumb-sized XIAO nRF54L15 Sense, collects speech
+and sends it to an LLM inside my home network, which acts on it. The board runs [Toit](https://toitlang.org) on
+Zephyr, through [ztoit](https://github.com/davidg238/ztoit). It shows two things: how much of a new board's work can
+stay in Toit, and how a small device reaches servers it can't see directly.
+
+Hold the button and say "remind me to buy milk". About three seconds after you let go, the LED blinks twice and the
+note is on a machine at home. The program on the board is 62 lines of Toit.
 
 ## The architecture
 
-WireGuard has been run on microcontrollers, but a persistent VPN rarely suits a battery device: NAT keepalives cost
-energy, the tunnel's headers crowd small radio frames, and a device that sleeps past WireGuard's two-minute rekey
-redoes the handshake on every wake. A device also shouldn't need to know where its servers are. So the network here
-has two hops:
+The board can't reach my home network directly, so it gets there in two hops:
 
 - **Local:** the device only talks to something nearby. In this demo that is a phone, over a bonded Bluetooth LE
   link: a personal area network of one. On Wi-Fi or Thread, a Tailscale subnet router on the LAN would play the
@@ -20,6 +21,11 @@ has two hops:
   from the board reaches the receiver at its tailnet address, wherever that machine is, with no open ports, no
   public addresses and no port forwarding, encrypted with WireGuard between the phone and the server. The phone can
   move between Wi-Fi and cellular, and the tailnet path moves with it.
+
+Why not put the VPN on the board? WireGuard has been run on microcontrollers, but a persistent VPN rarely suits a
+battery device: NAT keepalives cost energy, the tunnel's headers crowd small radio frames, and a device that sleeps
+past WireGuard's two-minute rekey redoes the handshake on every wake. A device also shouldn't need to know where its
+servers are.
 
 The board knows none of this. It holds no Tailscale keys and runs no WireGuard: it sends UDP to an IPv6 address, and
 the phone's relay puts it on the tailnet. The LLM is on yet another machine, published to the tailnet with
@@ -136,14 +142,21 @@ ztoit keeps only the one tree (ztoit #47).
 
 ## What it costs
 
-| | Flash | RAM (static) |
-|---|---|---|
-| Zephyr blinky in C | 39 KB | 6.4 KB |
-| ztoit, Toit VM, hello | 254 KB | 111 KB |
-| The demo: VM, mic, LC3, BLE, app | 518 KB | 172 KB |
+Where the demo's 518 KB of flash goes, from Zephyr's size report of the build:
 
-Of 1524 KB flash and 256 KB RAM. The Toit heap is 80 KB of that RAM, not yet tuned. liblc3 adds 92 KB of flash, and
-Bluetooth 194 KB.
+| Part | Flash |
+|---|---|
+| Toit programs: the system program and the app | 107 KB |
+| Bluetooth LE | 98 KB |
+| Toit VM, with ztoit's primitives | 93 KB |
+| LC3 encoder (liblc3) | 75 KB |
+| C library and other | 62 KB |
+| Zephyr kernel and drivers | 49 KB |
+| Crypto (Mbed TLS: Bluetooth pairing and the VM) | 33 KB |
+| **Total** | **518 KB** of 1524 KB |
+
+For scale, Zephyr's blinky in C is 39 KB. RAM is 172 KB of 256 KB, and 80 KB of that is the Toit heap, not yet
+tuned.
 
 The whole ladder, from an unopened board to this demo, took three days (2026-11-19 to 2026-11-21), with
 Claude Code doing the typing: 7 rungs, each with a plan, a demo, a journal entry and a review.
