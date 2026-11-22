@@ -193,3 +193,21 @@ a carrier that can't read what it carries; Tailscale would still carry the traff
 
 A separate short post covers the board's accelerometer, which went the other way: Zephyr's driver couldn't do what
 was needed, so the driver is in Toit.
+
+## Where the code is
+
+Three public repositories:
+
+- [ktau](https://github.com/davidg238/ktau): the demo itself.
+- [davidg238/toit](https://github.com/davidg238/toit/tree/zephyr-port), branch `zephyr-port`: our fork of
+  [Toit](https://github.com/toitlang/toit), from its v2.0.0 tag. The VM's Zephyr port and the primitives are here.
+- [ztoit](https://github.com/davidg238/ztoit): the board files and the build, which compiles the fork for Zephyr.
+
+| What | Repo | Path |
+|---|---|---|
+| The board's app (62 lines) | ktau | `app/rung7.toit` |
+| The receiver: Whisper, the LLM, the actions | ktau | `server/receiver.py`, `clips.py`, `act.py` |
+| Microphone and LC3 primitives | fork | `src/resources/zephyr.cc`; Toit side `lib/zephyr.toit` |
+| UDP over Bluetooth LE | fork | `src/resources/udp_ble.cc`, `src/event_sources/ble_udp_zephyr.cc` |
+| Board files and build | ztoit | `zephyr/boards/`, `zephyr/prj_ble.conf`, `zephyr/CMakeLists.txt` |
+| A journal entry per rung, the design | ktau | `docs/journal/`, `docs/design/` |
