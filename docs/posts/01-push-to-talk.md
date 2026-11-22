@@ -156,8 +156,9 @@ Where the demo's 518 KB of flash goes, from Zephyr's size report of the build:
 | Crypto (Mbed TLS: Bluetooth pairing and the VM) | 33 KB |
 | **Total** | **518 KB** of 1524 KB |
 
-A Toit program is compiled to a self-contained image that carries every library it uses, so the app's 62 lines
-come to 54 KB; a hello-world app is 25 KB. Images grow in steps of about 4 KB.
+Toit runs its system program (it starts the app and provides services such as the network) and the app as separate
+containers, each compiled as a whole, so libraries aren't shared between them. Each image carries every library it
+uses: the app's 62 lines come to 54 KB, and a hello-world app is 25 KB. Images grow in steps of about 4 KB.
 
 For scale, Zephyr's blinky in C is 39 KB of flash. The demo's static RAM is 172 KB of the board's 256 KB, and 80 KB
 of that is the Toit heap, not yet tuned.
