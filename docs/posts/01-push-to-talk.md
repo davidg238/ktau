@@ -146,17 +146,21 @@ Where the demo's 518 KB of flash goes, from Zephyr's size report of the build:
 
 | Part | Flash |
 |---|---|
-| Toit programs: the system program and the app | 107 KB |
 | Bluetooth LE | 98 KB |
 | Toit VM, with ztoit's primitives | 93 KB |
 | LC3 encoder (liblc3) | 75 KB |
 | C library and other | 62 KB |
+| Toit app: 62 lines, plus the Toit libraries it uses (core, net, UDP) | 54 KB |
+| Toit system program | 54 KB |
 | Zephyr kernel and drivers | 49 KB |
 | Crypto (Mbed TLS: Bluetooth pairing and the VM) | 33 KB |
 | **Total** | **518 KB** of 1524 KB |
 
-For scale, Zephyr's blinky in C is 39 KB. RAM is 172 KB of 256 KB, and 80 KB of that is the Toit heap, not yet
-tuned.
+A Toit program is compiled to a self-contained image that carries every library it uses, so the app's 62 lines
+come to 54 KB; a hello-world app is 25 KB. Images grow in steps of about 4 KB.
+
+For scale, Zephyr's blinky in C is 39 KB of flash. The demo's static RAM is 172 KB of the board's 256 KB, and 80 KB
+of that is the Toit heap, not yet tuned.
 
 The whole ladder, from an unopened board to this demo, took three days (2026-11-19 to 2026-11-21), with
 Claude Code doing the typing: 7 rungs, each with a plan, a demo, a journal entry and a review.
