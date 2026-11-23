@@ -162,4 +162,6 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 ## Addendum, 2026-11-23: on-board speech sketch (#6)
 
 - David asked for the device to speak on its own, at lower quality if need be. Claude's sketch of an LPC diphone
-  synth is in `2026-11-23-on-board-speech-sketch.md`. It is undecided; the LC3 path in the addendum above stands.
+  synth is in `2026-11-23-on-board-speech-sketch.md`.
+- **Adopted** (David, 2026-11-23): it replaces the LC3 reply path. The server sends phonemes with duration and
+  pitch; offline the board plays canned LPC phrases. ztoit #53 no longer blocks the reply.

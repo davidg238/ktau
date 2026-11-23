@@ -1,6 +1,6 @@
 # On-board speech: an LPC diphone synth on the nRF54L15 (#6)
 
-Status: sketch by Claude, 2026-11-23, for David to check. Nothing here is decided.
+Status: sketch by Claude, 2026-11-23; **adopted by David the same day** (the two modes below, S1–S4).
 
 ## Why
 
@@ -82,6 +82,7 @@ sleepy defaults, so speech replies no longer need ztoit #53's rx-on. Phonemes in
 | Step | Demo |
 |---|---|
 | S1 | Host: `lpc_reference.py` (done, the samples above) |
+| S1b | Host (done): the frame format in `tools/lpc_codec.py` (55 bits a frame, ~300 B a second); the integer synth `c/lpcsynth/` matches its Python model sample for sample (`tools/test_lpc_codec.py`); `lpc_codec.py phrase` makes canned phrases |
 | S2 | Board: a canned LPC phrase in flash ("can't reach the server") plays through I2S and the MAX98357A; the C primitive measured. This alone is the offline mode |
 | S3 | Host: diphone table built from the source voice; a host synth speaks phoneme strings (tune the joins here) |
 | S4 | Board: phonemes + duration + pitch from the server over Thread → speech |

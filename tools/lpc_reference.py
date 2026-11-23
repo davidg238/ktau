@@ -1,11 +1,11 @@
 """Host reference for on-board LPC speech (#6): what LPC-coded speech at the device's bit rate sounds like.
 
-Usage: lpc_reference.py <in.wav> <out.wav> [--rate 8000|16000] [--order N] [--rule-pitch]
+Usage: lpc_reference.py <in.wav> <out.wav> [--rule-pitch]     (in.wav: 8 kHz mono 16-bit)
 
-Analyses natural speech into LPC frames (reflection coefficients, pitch, gain, voicing), quantises them roughly as
-LPC-10 does, and resynthesises with a glottal-pulse / noise source through a lattice filter: the same loop a board
-primitive would run. --rule-pitch replaces the measured pitch with a falling declination line, as a diphone synth
-with rule prosody would produce. Join artefacts between diphones are not modelled, so this is an upper bound.
+Analyses natural speech into LPC frames (reflection coefficients, pitch, gain, voicing). lpc_codec.py quantises
+them and resynthesises with its integer model of the board synth. --rule-pitch replaces the measured pitch with a
+falling declination line, as a diphone synth with rule prosody would produce. Join artefacts between diphones are
+not modelled, so this is an upper bound.
 """
 import argparse
 import wave
@@ -18,13 +18,6 @@ def read_wav(path):
         assert w.getsampwidth() == 2 and w.getnchannels() == 1, 'mono 16-bit wav expected'
         x = np.frombuffer(w.readframes(w.getnframes()), dtype='<i2').astype(np.float64) / 32768
         return x, w.getframerate()
-
-
-def write_wav(path, x, rate):
-    y = np.clip(x / (np.max(np.abs(x)) + 1e-9) * 0.9, -1, 1)
-    with wave.open(path, 'wb') as w:
-        w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
-        w.writeframes((y * 32767).astype('<i2').tobytes())
 
 
 def levinson(r, order):
@@ -54,24 +47,6 @@ def pitch_of(seg, rate):
     return rate / lag, r[lag] / r[0]
 
 
-def quantise(k, f0, gain_db):
-    # LPC-10 style: k1,k2 as log-area ratios (finer near |k|=1), the rest linear with fewer bits for higher orders.
-    q = k.copy()
-    for i, ki in enumerate(k):
-        bits = 6 if i < 2 else (5 if i < 4 else (4 if i < 8 else 3))
-        if i < 2:
-            lar = np.log((1 + ki) / (1 - ki + 1e-9) + 1e-9)
-            step = 8.0 / (2 ** bits)
-            lar = np.clip(np.round(lar / step) * step, -4, 4)
-            q[i] = np.tanh(lar / 2)
-        else:
-            step = 2.0 / (2 ** bits)
-            q[i] = np.clip(np.round(ki / step) * step, -0.98, 0.98)
-    f0q = 0.0 if f0 == 0 else float(np.exp(np.round(np.log(f0) * 20) / 20))   # ~6 bits over 60-400 Hz
-    gq = float(np.round(gain_db / 2) * 2)                                       # 2 dB steps, ~5 bits
-    return q, f0q, gq
-
-
 def analyse(x, rate, order, frame_ms=22.5):
     hop = int(rate * frame_ms / 1000)
     win = int(hop * 1.33)
@@ -88,7 +63,7 @@ def analyse(x, rate, order, frame_ms=22.5):
         energy = np.sqrt(np.mean(x[start:start + win] ** 2))
         zcr = np.mean(np.abs(np.diff(np.sign(x[start:start + win])))) / 2
         voiced = strength > 0.35 and energy > 0.01 and zcr < 0.25
-        frames.append(quantise(k, f0 if voiced else 0.0, 20 * np.log10(resid_rms + 1e-9)))
+        frames.append((k, f0 if voiced else 0.0, 20 * np.log10(resid_rms + 1e-9)))
     return frames, hop
 
 
@@ -114,63 +89,18 @@ def rule_pitch(frames, top=210.0, bottom=150.0):
     return out
 
 
-def glottal_pulse(n):
-    """One unit-energy impulse per period of n samples: a flat excitation.
-
-    The LPC filter is fitted to pre-emphasised speech, so it already carries the glottal spectral tilt and
-    de-emphasis restores it. A shaped (Rosenberg) pulse applies that tilt a second time: 10-16 dB lost above
-    1 kHz, heard as muffled (measured 2026-11-23 against the Piper source)."""
-    d = np.zeros(n); d[0] = np.sqrt(n)
-    return d
-
-
-def synthesise(frames, hop, rate, seed=1):
-    rng = np.random.default_rng(seed)
-    order = len(frames[0][0])
-    b = np.zeros(order + 1)                  # lattice state
-    out = np.zeros(len(frames) * hop)
-    phase_left = 0
-    pulse, pi = np.zeros(1), 1
-    prev = frames[0]
-    for fi, cur in enumerate(frames):
-        for n in range(hop):
-            t = n / hop                      # interpolate parameters across the frame, as a board would per sample
-            k = prev[0] * (1 - t) + cur[0] * t
-            f0 = cur[1] if (prev[1] == 0 or cur[1] == 0) else prev[1] * (1 - t) + cur[1] * t
-            g = 10 ** ((prev[2] * (1 - t) + cur[2] * t) / 20)
-            if f0 > 0:
-                if pi >= len(pulse):
-                    pulse, pi = glottal_pulse(int(rate / f0)), 0
-                e = pulse[pi] + 0.05 * rng.standard_normal(); pi += 1
-            else:
-                e = rng.standard_normal(); pi = len(pulse)
-            f = e * g
-            for i in range(order - 1, -1, -1):   # all-pole lattice
-                f = f - k[i] * b[i]
-                b[i + 1] = b[i] + k[i] * f
-            b[0] = f
-            out[fi * hop + n] = f
-        prev = cur
-    y = np.zeros_like(out)                   # de-emphasis
-    for i in range(1, len(out)):
-        y[i] = out[i] + 0.9375 * y[i - 1]
-    return y
-
-
 def main():
+    import os, sys
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import lpc_codec
     ap = argparse.ArgumentParser()
     ap.add_argument('inp'); ap.add_argument('out')
-    ap.add_argument('--order', type=int, default=10)
     ap.add_argument('--rule-pitch', action='store_true')
     a = ap.parse_args()
-    x, rate = read_wav(a.inp)
-    frames, hop = analyse(x, rate, a.order)
-    if a.rule_pitch:
-        frames = rule_pitch(frames)
-    write_wav(a.out, synthesise(frames, hop, rate), rate)
-    bits = 6 * 2 + 5 * 2 + 4 * 4 + 3 * max(a.order - 8, 0) + 6 + 5 + 1
-    print(f'{a.out}: {len(frames)} frames at {rate} Hz, order {a.order}, ~{bits} bits/frame '
-          f'= {bits * rate / hop / 1000:.1f} kbit/s')
+    frames = lpc_codec.encode_wav(a.inp, a.rule_pitch)
+    lpc_codec.write_wav(a.out, lpc_codec.synthesise(frames, lpc_codec.scale_for(frames)))
+    bits = lpc_codec.FRAME_BITS
+    print(f'{a.out}: {len(frames)} frames, {bits} bits/frame = {bits * lpc_codec.RATE / lpc_codec.HOP / 1000:.1f} kbit/s')
 
 
 if __name__ == '__main__':
