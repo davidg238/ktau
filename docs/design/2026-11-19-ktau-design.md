@@ -147,3 +147,14 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 - The LC3 frame size and bit rate. Start at 16 kHz, 32 kbit/s, and let the measurements tune it.
 - Board file details (pinctrl, flashing method), found at rung 1 from Seeed's material.
 - How the journal entries are laid out.
+
+## Addendum, 2026-11-22: the reply path goes over Thread (#6)
+
+- **David prefers Thread to the phone relay** for the speech reply (#6), so the device works anywhere in the house
+  without a phone, provided Thread carries the audio both ways.
+- **Measured, one hop** (#6, comment of 2026-11-22; `app/thread_bench.toit`, `tools/thread_bench_server.py`): it
+  does, one direction at a time, in rung 7's 100 ms datagrams, and only with the node rx-on-when-idle. As ztoit
+  attaches it (sleepy, polling) the downlink is under the audio rate: ztoit #53.
+- **Follows from the numbers:** the exchange is talk, then reply, never both at once at 32 kbit/s; datagrams stay
+  at 100 ms of audio (smaller ones lose more).
+- **Not yet measured:** more than one hop, other rooms, LC3 decode time on the board.
