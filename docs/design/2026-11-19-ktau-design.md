@@ -158,3 +158,8 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
 - **Follows from the numbers:** the exchange is talk, then reply, never both at once at 32 kbit/s; datagrams stay
   at 100 ms of audio (smaller ones lose more).
 - **Not yet measured:** more than one hop, other rooms, LC3 decode time on the board.
+
+## Addendum, 2026-11-23: on-board speech sketch (#6)
+
+- David asked for the device to speak on its own, at lower quality if need be. Claude's sketch of an LPC diphone
+  synth is in `2026-11-23-on-board-speech-sketch.md`. It is undecided; the LC3 path in the addendum above stands.
