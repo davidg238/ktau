@@ -1,0 +1,18 @@
+/* MAX98357A on I2S20 (port P1 only): BCLK D0 = P1.04 and LRC D5 = P1.11 are dedicated clock pins,
+ * DIN D1 = P1.05 sits next to BCLK. Hookup: docs/hookup.md. */
+&pinctrl {
+	i2s20_default: i2s20_default {
+		group1 {
+			psels = <NRF_PSEL(I2S_SCK_M, 1, 4)>,
+				<NRF_PSEL(I2S_LRCK_M, 1, 11)>,
+				<NRF_PSEL(I2S_SDOUT, 1, 5)>;
+		};
+	};
+};
+
+&i2s20 {
+	status = "okay";
+	pinctrl-0 = <&i2s20_default>;
+	pinctrl-names = "default";
+	clock-source = "PCLK32M";
+};
