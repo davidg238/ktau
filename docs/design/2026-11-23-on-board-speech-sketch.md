@@ -84,6 +84,7 @@ sleepy defaults, so speech replies no longer need ztoit #53's rx-on. Phonemes in
 | S1 | Host: `lpc_reference.py` (done, the samples above) |
 | S1b | Host (done): the frame format in `tools/lpc_codec.py` (55 bits a frame, ~300 B a second); the integer synth `c/lpcsynth/` matches its Python model sample for sample (`tools/test_lpc_codec.py`); `lpc_codec.py phrase` makes canned phrases |
 | S2 | Board: a canned LPC phrase in flash ("can't reach the server") plays through I2S and the MAX98357A; the C primitive measured. This alone is the offline mode |
+| S2 status | Blocked 2026-11-23: I2S20 stalls after the first buffer (driver and bare registers); see `docs/hookup.md` |
 | S3 | Host: diphone table built from the source voice; a host synth speaks phoneme strings (tune the joins here) |
 | S4 | Board: phonemes + duration + pitch from the server over Thread → speech |
 | S5 | Only if needed: free text with no server (on-board lexicon, letter-to-sound, rule prosody) |
