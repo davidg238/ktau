@@ -211,3 +211,11 @@ wire formats.
   and the codec's SNR on the test sentence is 5.9 dB (9.5 at 3). A host trial only (`relp_reference.BITS` set to
   2 before `relp_codec` is imported); the C synth has not run at 2 bits.
 - **Open:** join smoothing; how a substituted pause sounds; a decimated residual; k1's table range.
+
+## Addendum 2026-11-25: 2 bits a sample, and the voice in the Toit firmware
+
+- The table is now 2 bits a residual sample (`BITS` in `tools/relp_reference.py`): at 3 bits the Thread firmware
+  left under 20 KB of flash free. David, hearing it from the board: "the sound is ok".
+- `c/kalcheck`, rebuilt at 2 bits, measures the synth at 35249 µs of CPU per second of speech (36 ms at 3 bits).
+- The codec test's SNR floor is per bit width (`tools/test_relp_codec.py`).
+- The synth runs in the Toit firmware as `c/speech`; journal 08.

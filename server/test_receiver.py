@@ -1,13 +1,13 @@
 """Tests for receiver.py's audio path: run with `python3 -m unittest server/test_receiver.py` from the repo root.
 
 Needs the host liblc3 (see tools/lc3dec.py)."""
-import math, os, struct, sys, tempfile, unittest
+import contextlib, io, math, os, struct, sys, tempfile, unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
-import clips, lc3dec  # noqa: E402
-import receiver  # noqa: E402
+import clips, kal_diphones, lc3dec  # noqa: E402
+import receiver, speak  # noqa: E402
 from test_act import Stub  # noqa: E402
 
 
@@ -35,39 +35,91 @@ class ReceiverAudioTest(unittest.TestCase):
         self.assertEqual(list(receiver.normalise(receiver.decode_clip([None, None]))), [0.0] * 3200)
 
 
+# The kal voice's phones, numbered as tools/kal_diphones.py build numbers them in the board's table.
+PHONES = kal_diphones.kal_index(kal_diphones.load_kal())['phones']
+
+
 class ReceiverHandleTest(unittest.TestCase):
     """Whatever goes wrong with one clip, handle() replies FAILED and the receiver lives on."""
     clip = clips.Clip(('::1', 1, 0, 0), 7, [None])
+    table = {'phones': PHONES}  # all of the table speak.wire reads
 
     def handle(self, stt, content):
         stub = Stub(content)
         try:
-            return receiver.handle(self.clip, stt, stub.url, '/nonexistent/notes.txt')
+            return receiver.handle(self.clip, stt, stub.url, '/nonexistent/notes.txt', self.table)
         finally:
             stub.close()
 
     def test_llm_null_content_fails(self):
-        status, line = self.handle(lambda s: ('hello', 0.1), None)
+        status, line, wire = self.handle(lambda s: ('hello', 0.1), None)
         self.assertEqual(status, clips.FAILED)
         self.assertIn('error', line)
 
-    def test_none_is_refused(self):
-        status, line = self.handle(lambda s: ('turn on the lights', 0.1), '{"action":"none","text":"I cannot."}')
+    def test_none_is_refused_and_spoken(self):
+        status, line, wire = self.handle(lambda s: ('turn on the lights', 0.1),
+                                         '{"action":"none","text":"I cannot."}')
         self.assertEqual(status, clips.REFUSED)
+        self.assertEqual([p for p, _, _ in kal_diphones.unpack_wire(self.table, wire)],
+                         ['pau', 'ay', 'k', 'ae', 'n', 'aa', 't', 'pau'])
 
     def test_note_is_acted(self):
         with tempfile.TemporaryDirectory() as d:
             stub = Stub('{"action":"note","text":"milk"}')
             try:
-                status, _ = receiver.handle(self.clip, lambda s: ('note milk', 0.1), stub.url, d + '/notes.txt')
+                status, _, wire = receiver.handle(self.clip, lambda s: ('note milk', 0.1), stub.url, d + '/notes.txt',
+                                                    self.table)
             finally:
                 stub.close()
+        self.assertEqual((status, wire), (clips.ACTED, b''))
+
+    def test_say_replies_with_phones(self):
+        status, line, wire = self.handle(lambda s: ('say hello', 0.1), '{"action":"say","text":"Hello there."}')
         self.assertEqual(status, clips.ACTED)
+        phones = kal_diphones.unpack_wire(self.table, wire)
+        self.assertEqual([p for p, _, _ in phones], ['pau', 'hh', 'ax', 'l', 'ow', 'dh', 'eh', 'r', 'pau'])
+        self.assertTrue(all(ms > 0 and 50 < hz < 256 for _, ms, hz in phones))
+        self.assertIn('speak 9/9 phones', line)
+        self.assertLessEqual(len(clips.encode_reply(7, status, wire)), 4 + clips.BLOCK_BYTES)
+
+    def test_long_say_is_cut_at_a_pause(self):
+        text = 'One two three four five six seven eight nine ten, ' * 6
+        status, line, wire = self.handle(lambda s: ('count', 0.1), '{"action":"say","text":"%s"}' % text)
+        self.assertEqual(status, clips.ACTED)
+        phones = kal_diphones.unpack_wire(self.table, wire)
+        self.assertLessEqual(len(wire), clips.MAX_WIRE)
+        self.assertEqual(phones[-1][0], 'pau')
+        self.assertGreater(len(phones), speak.MAX_PHONES // 2)
+
+    def test_phone_the_table_lacks_fails(self):
+        stub = Stub('{"action":"say","text":"Hello there."}')
+        try:
+            status, line, wire = receiver.handle(self.clip, lambda s: ('say hello', 0.1), stub.url, '/nonexistent/n',
+                                                 {'phones': ['pau', 'hh']})
+        finally:
+            stub.close()
+        self.assertEqual((status, wire), (clips.FAILED, b''))
+        self.assertIn('speak', line)
+
+    def test_whisper_falls_back_to_the_cpu(self):
+        class FakeWhisper(receiver.Whisper):
+            def __init__(self, fallback):
+                self.model, self.fallback = 'gpu', fallback
+
+            def transcribe(self, model, samples):
+                if model == 'gpu':
+                    raise RuntimeError('CUDA failed with error out of memory')
+                return model, 0.0
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(FakeWhisper('cpu')(b''), ('cpu', 0.0))
+        self.assertIn('out of memory', out.getvalue())
+        with self.assertRaises(RuntimeError):
+            FakeWhisper(None)(b'')
 
     def test_stt_error_fails(self):
         def stt(samples):
             raise RuntimeError('whisper broke')
-        status, line = self.handle(stt, '{"action":"none","text":"x"}')
+        status, line, wire = self.handle(stt, '{"action":"none","text":"x"}')
         self.assertEqual(status, clips.FAILED)
         self.assertIn('whisper broke', line)
 

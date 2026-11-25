@@ -1,15 +1,17 @@
 """Reassembles the clips a ktau device streams, and the bytes of its wire (rung 7).
 
 Big-endian. audio: clip:u16 | seq:u16 | 400 B of LC3 (one 100 ms block, seq from 0).
-end: clip:u16 | 0xFFFF | blocks:u16 (sent 3 times). reply: clip:u16 | status:u8 (0 acted, 1 no speech, 2 failed, 3 refused: the LLM chose `none`).
+end: clip:u16 | 0xFFFF | blocks:u16 (sent 3 times). reply: clip:u16 | status:u8 (0 acted, 1 no speech, 2 failed, 3 refused: the LLM chose `none`) | phones for the board
+to speak, up to MAX_WIRE bytes, none unless the LLM answered in words (speak.py; #6).
 A clip finishes on its END, when the same source starts another clip, or after `idle_s` with nothing new.
 """
 import collections, struct
 
 ACTED, NO_SPEECH, FAILED, REFUSED = 0, 1, 2, 3
 BLOCK_BYTES = 400   # 10 LC3 frames of 40 B: 100 ms at 16 kHz, 32 kbit/s (rung 5).
-MAX_BLOCKS = 100    # The device stops at 50 (5 s); this is the guard.
+MAX_BLOCKS = 300    # 30 s, where the device stops (MAX-BLOCKS in app/rung8.toit); this is the guard.
 END_SEQ = 0xFFFF
+MAX_WIRE = 4 + BLOCK_BYTES - 3   # A reply is no longer than an audio datagram, the size the links were measured at.
 REMEMBERED = 8      # Finished clip ids kept per source, so repeated ENDs and late blocks are dropped.
 
 Clip = collections.namedtuple('Clip', 'src clip_id frames')  # frames: one per block, None where lost.
@@ -23,8 +25,9 @@ def encode_end(clip_id, blocks):
     return struct.pack('>HHH', clip_id, END_SEQ, blocks)
 
 
-def encode_reply(clip_id, status):
-    return struct.pack('>HB', clip_id, status)
+def encode_reply(clip_id, status, wire=b''):
+    assert len(wire) <= MAX_WIRE
+    return struct.pack('>HB', clip_id, status) + wire
 
 
 class _Open:

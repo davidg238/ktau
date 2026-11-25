@@ -1,0 +1,4 @@
+name: ktau_speech
+build:
+  cmake: .
+  kconfig: Kconfig

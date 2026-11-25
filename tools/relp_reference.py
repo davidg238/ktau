@@ -29,7 +29,7 @@ import lpc_reference as ref
 
 OUT_RATE = 16000
 HOP_MS = 10
-BITS = 3
+BITS = 2
 PEAK = 29480                 # the level the canned LPC phrases peak at
 PITCH, STRETCH = 1.15, 1.2   # clip 4: 15% higher, 20% slower
 # Reconstruction levels for a unit-variance Laplacian source (Lloyd-Max), positive half.

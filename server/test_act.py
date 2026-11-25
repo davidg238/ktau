@@ -59,14 +59,12 @@ class ActTest(unittest.TestCase):
         self.assertRegex(lines[0], r'^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d buy milk$')
         self.assertTrue(lines[1].endswith(' call Bob'))
 
-    def test_say_calls_runner(self):
-        calls = []
+    def test_say_and_none_write_nothing(self):
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, 'notes.txt')
-            act.run('say', 'hi', path, say=calls.append)
-            act.run('none', 'it is noon', path, say=calls.append)
+            act.run('say', 'hi', path)
+            act.run('none', 'it is noon', path)
             self.assertFalse(os.path.exists(path))
-        self.assertEqual(calls, [['spd-say', '--', 'hi']])
 
     def test_ask_body(self):
         stub = Stub('{"action":"note","text":"milk"}')

@@ -165,3 +165,17 @@ Hardware: Seeed Studio XIAO nRF54L15 Sense, with its on-board PDM microphone and
   synth is in `2026-11-23-on-board-speech-sketch.md`.
 - **Adopted** (David, 2026-11-23): it replaces the LC3 reply path. The server sends phonemes with duration and
   pitch; offline the board plays canned LPC phrases. ztoit #53 no longer blocks the reply.
+
+## Addendum, 2026-11-25: rung 8, the spoken answer (#6)
+
+Decided by David at the bench; the record of the day is `docs/journal/08-spoken-answer.md`.
+
+- **Rung 8 is in the demo:** the reply carries phones and the board speaks them. `say` and `none` are both spoken,
+  one sentence of at most 15 words (the prompt in `server/act.py`); a reply is one datagram (`MAX_WIRE`).
+- **Two links, one at a time:** Thread at home, or a phone's BLE relay and the tailnet. The firmware is built with
+  one; the app is the same (`app/rung8.toit`, `app/rung8ble.toit`).
+- **The server is one machine,** the z170: the receiver, Whisper `small.en` on the smaller GPU with a CPU fallback,
+  and the LLM on localhost. The LAN hop from the border router is plain UDP, as the post's security table says;
+  moving it onto the tailnet was looked at and left.
+- **A clip is at most 30 s** (`MAX-BLOCKS`; `MAX_BLOCKS` is the server's guard).
+- **A fatal error restarts the board** (`CONFIG_RESET_ON_FATAL_ERROR`), a workaround for #7, not a fix.

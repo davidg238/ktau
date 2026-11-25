@@ -1,0 +1,42 @@
+/* ktau #6, on top of ztoit's board overlay: the MAX98357A on I2S20, and room for the diphone table.
+ *
+ * I2S20 (port P1 only): BCLK D0 = P1.04 and LRC D5 = P1.11 are dedicated clock pins, DIN D1 = P1.05 sits next
+ * to BCLK. Hookup and the reasons for the two fixes below: docs/hookup.md. */
+&pinctrl {
+	i2s20_default: i2s20_default {
+		group1 {
+			psels = <NRF_PSEL(I2S_SCK_M, 1, 4)>,
+				<NRF_PSEL(I2S_LRCK_M, 1, 11)>,
+				<NRF_PSEL(I2S_SDOUT, 1, 5)>;
+		};
+	};
+};
+
+&i2s20 {
+	status = "okay";
+	pinctrl-0 = <&i2s20_default>;
+	pinctrl-names = "default";
+	/* The board dtsi picks "PCLK32M" (internal RC). The MAX98357A times everything from BCLK. */
+	clock-source = "PCLK32M_HFXO";
+};
+
+/* The board enables i2c22 on D4/D5 (P1.10/P1.11). TWIM22 then owns P1.11 and I2S20 cannot clock LRCK there. */
+&i2c22 {
+	status = "disabled";
+};
+
+/* The table is linked into the firmware, so the firmware's region grows to 0x138000 (prj_speech.conf;
+ * sized for the 2-bit table and Thread) and Toit's
+ * registry takes what is left before the storage partition at 0x174000. No agent staging area: ktau has no agent. */
+/delete-node/ &toit_partition;
+/delete-node/ &stage_partition;
+
+&cpuapp_rram {
+	partitions {
+		toit_partition: partition@138000 {
+			compatible = "zephyr,mapped-partition";
+			label = "toit";
+			reg = <0x00138000 DT_SIZE_K(240)>;
+		};
+	};
+};

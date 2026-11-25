@@ -1,6 +1,9 @@
 # Hookup: MAX98357A I2S amp on the XIAO nRF54L15 Sense (cd2e)
 
-For on-board speech (#6, S2). Module: `max98357a.png`; bench as wired 2026-11-23: `hookup-breadboard.jpg`.
+For on-board speech (#6). Module: `max98357a.png`; bench as wired 2026-11-23: `hookup-breadboard.jpg`; the
+bench that runs rung 8 (2026-11-25): `hookup-bench.jpg`, below.
+
+![The XIAO nRF54L15 Sense (cd2e), the MAX98357A and the speaker on a breadboard](hookup-bench.jpg)
 
 | MAX98357A | XIAO | nRF54L15 | Why |
 |---|---|---|---|
@@ -34,7 +37,7 @@ Three things were wrong; each fix is in `c/phrasecheck` (the reference) and its 
 - Level: 9 dB gain, Vin on 3V3, samples shifted right by `QUIETER`: a good bench volume.
 - Not the cause of anything: MCKFREQ at 16 kHz, sample rate (for the stall), input buffers, dedicated clock pins
   (D2/D3 clock I2S fine), the amp.
-- The Toit firmware needs all three (ztoit board files / the speech primitive).
+- The Toit firmware has all three: the first two in `c/speech/speech.overlay`, the third in `c/speech/speech.c`.
 - Unexplained: a `Halting system` on the first `tonecheck` boot of the day; and twice a flash completed but the
   board printed nothing until reflashed. A faint "twang" ended each clip on the RC-clock run; not asked about since.
 - Logs (git-ignored): `samples/i2sbare-2026-11-24.log`, `samples/tonecheck-2026-11-24.log`,

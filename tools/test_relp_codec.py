@@ -77,7 +77,8 @@ class RelpCodec(unittest.TestCase):
         self.assertEqual(len(frames), n // C.HOP)
         y = np.array(C.synthesise(frames)) / 32768
         snr = 10 * np.log10(np.sum(x ** 2) / np.sum((x - y) ** 2))
-        self.assertGreater(snr, 9, f'SNR {snr:.1f} dB')
+        # Measured 6.2 dB at 2 bits a residual sample; the floor at 3 bits was 9.
+        self.assertGreater(snr, {2: 5, 3: 9}[C.RES_BITS], f'SNR {snr:.1f} dB')
         self.assertEqual([f[0] for f in frames[38:50]], [0] * 12, 'silence encodes as gain 0')
         self.assertEqual(np.max(np.abs(y[3300:3900])), 0)
 

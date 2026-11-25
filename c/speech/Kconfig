@@ -1,0 +1,6 @@
+config KTAU_SPEECH
+	bool "ktau: speak phones through I2S20 (zephyr.Speech in the Toit firmware)"
+	depends on I2S
+	help
+	  Links c/kalsynth, the kal diphone table and a player thread into the
+	  firmware, behind the Toit fork's speech primitives.

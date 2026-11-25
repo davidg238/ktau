@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Send an audio file to ktau's receiver exactly as the device does (rung 7), and print the reply.
 
-Usage: sendclip.py <audio-file> <host> [--port 7700] [--clip N] [--drop SEQ,…] [--no-end]
+Usage: sendclip.py <audio-file> <host> [--port 7700] [--clip N] [--drop SEQ,…] [--no-end] [--phones F.wire]
        sendclip.py <audio-file> --write F.lc3          (encode only, for a host without liblc3)
        sendclip.py --read F.lc3 <host> …                (send an encoded dump)
 
 ffmpeg decodes the file to 16 kHz mono; the host liblc3 encodes 10 ms frames of 40 B; each 100 ms block goes in
-one datagram, one per 100 ms; then the END 3 times, 50 ms apart. Waits 30 s for the reply.
+one datagram, one per 100 ms; then the END 3 times, 50 ms apart. Waits 30 s for the reply; the phones it carries
+for the board to speak (#6) go to --phones, to hear with tools/kal_diphones.py wire.
 A dump is the blocks back to back (400 B each; a short last block is padded with silence before encoding).
 """
 import argparse, os, socket, struct, subprocess, sys, time
@@ -28,7 +29,7 @@ def encode(path):
     return b''.join(enc.encode(pcm[i:i + 320], 40, bit_depth=16) for i in range(0, len(pcm), 320))
 
 
-def send(lc3, host, port, clip_id, drop, end):
+def send(lc3, host, port, clip_id, drop, end, phones=None):
     blocks = [lc3[i:i + clips.BLOCK_BYTES] for i in range(0, len(lc3), clips.BLOCK_BYTES)][:50]
     sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
     sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
@@ -46,10 +47,13 @@ def send(lc3, host, port, clip_id, drop, end):
     sock.settimeout(30)
     try:
         while True:
-            data, _ = sock.recvfrom(64)
-            if len(data) == 3 and struct.unpack('>H', data[:2])[0] == clip_id:
-                print('clip %d: %d sent, reply %s in %d ms' % (clip_id, len(blocks) - len(drop & set(range(len(blocks)))),
-                      STATUS.get(data[2], data[2]), (time.monotonic() - released) * 1000))
+            data, _ = sock.recvfrom(2048)
+            if len(data) >= 3 and struct.unpack('>H', data[:2])[0] == clip_id:
+                print('clip %d: %d sent, reply %s in %d ms, %d B to speak' % (
+                      clip_id, len(blocks) - len(drop & set(range(len(blocks)))), STATUS.get(data[2], data[2]),
+                      (time.monotonic() - released) * 1000, len(data) - 3))
+                if phones:
+                    open(phones, 'wb').write(data[3:])
                 return
     except socket.timeout:
         print('clip %d: %d sent, no reply' % (clip_id, len(blocks)))
@@ -65,6 +69,7 @@ def main():
     p.add_argument('--no-end', action='store_true')
     p.add_argument('--write')
     p.add_argument('--read')
+    p.add_argument('--phones')
     a = p.parse_args()
     if a.read:
         a.host = a.host or a.audio
@@ -76,7 +81,7 @@ def main():
         print('%s: %d blocks' % (a.write, len(lc3) // clips.BLOCK_BYTES))
         return
     drop = {int(s) for s in a.drop.split(',') if s}
-    send(lc3, a.host, a.port, a.clip, drop, not a.no_end)
+    send(lc3, a.host, a.port, a.clip, drop, not a.no_end, a.phones)
 
 
 if __name__ == '__main__':

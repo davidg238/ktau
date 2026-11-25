@@ -2,7 +2,7 @@
 import os, sys, unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from clips import Assembler, encode_audio, encode_end, encode_reply, ACTED, NO_SPEECH, FAILED  # noqa: E402
+from clips import Assembler, encode_audio, encode_end, encode_reply, MAX_BLOCKS, ACTED, NO_SPEECH, FAILED  # noqa: E402
 
 SRC = ('fd7a::1', 4000, 0, 0)
 OTHER = ('fd7a::2', 4000, 0, 0)
@@ -75,7 +75,7 @@ class ClipsTest(unittest.TestCase):
 
     def test_cap(self):
         a = Assembler()
-        self.assertEqual(a.feed(SRC, encode_audio(1, 100, block(0)), 0.0), [])
+        self.assertEqual(a.feed(SRC, encode_audio(1, MAX_BLOCKS, block(0)), 0.0), [])
         self.assertEqual(a.expire(100.0), [])
 
     def test_end_shorter_than_blocks_seen(self):

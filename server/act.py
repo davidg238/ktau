@@ -3,7 +3,7 @@
 The model is the llama.cpp server on the z170, OpenAI-compatible, served to the tailnet at http://z170:8080.
 It answers with one JSON object {"action", "text"}; the action must be on ACTIONS, or nothing runs.
 """
-import datetime, json, os, subprocess, urllib.request
+import datetime, json, os, urllib.request
 
 ACTIONS = ('say', 'note', 'none')
 
@@ -11,8 +11,9 @@ SYSTEM_PROMPT = (
     'You turn one short spoken instruction, transcribed by speech-to-text, into one action. '
     'Answer with only a JSON object {"action": ..., "text": ...}. The actions are: '
     '"note" - keep something for later; text is the note, written plainly. '
-    '"say" - speak a reply aloud through the speaker; text is what to say, one or two short sentences. '
-    '"none" - anything else, including requests you cannot carry out; text is a one-sentence answer. '
+    '"say" - speak a reply aloud through the speaker; text is what to say. '
+    '"none" - anything else, including requests you cannot carry out; text is your answer, spoken aloud too. '
+    'A spoken text is one sentence of at most 15 words. '
     'You cannot control lights, devices or anything other than these three actions.'
 )
 
@@ -44,14 +45,9 @@ def parse(answer):
     return obj['action'], obj['text']
 
 
-def _say(argv):
-    subprocess.run(argv, check=True, timeout=10)
-
-
-def run(action, text, notes_path, say=_say):
+def run(action, text, notes_path):
+    """`say` and `none` do nothing here: the receiver sends their text to the board as phones (speak.py)."""
     if action == 'note':
         os.makedirs(os.path.dirname(notes_path), exist_ok=True)
         with open(notes_path, 'a') as f:
             f.write('%s %s\n' % (datetime.datetime.now().isoformat(timespec='seconds'), text))
-    elif action == 'say':
-        say(['spd-say', '--', text])  # '--': the text can't be read as an option.
