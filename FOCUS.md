@@ -1,16 +1,17 @@
 # Focus
 
-- **Next session starts with:** branch `main`, focus #6 S2 (I2S out to the MAX98357A). First action: get the
-  nRF54L15 MCKFREQ equation (datasheet Figure 66, or Nordic's online I2S page), then sweep MCKFREQ in
-  `c/i2sbare` (silent, registers only) until TXPTRUPD reaches ~50/s. Then read the nRF54L15 errata in full.
-- **State:** `docs/hookup.md` (pins, status, what is ruled out). The LPC synth is done and host-tested
-  (`c/lpcsynth`, `tools/lpc_codec.py`, `tools/test_lpc_codec.py`); phrases in `samples/lpc-phrases-2026-11-23/`.
-- **Awaiting David:** keep the amp's Vin unplugged until a run shows buffers advancing (clocks without data = loud
-  noise); first audible test ≤ −36 dBFS and ≤ 3 s. A listen to the canned phrases.
-- **Bench:** XIAO cd2e runs `build-ktau-i2sbare` (`~/workspace/board-alloc.md`). `build-ktau-thread-rxon` cannot be
-  rebuilt (its scratch source was lost in the crash). Pixel bond gone (ztoit #51).
+- **Next session starts with:** branch `main`, focus #6. First action: a frame format and an integer C synth for
+  residual-excited LPC at 8 kHz (clip 2 of `tools/relp_reference.py`), bit-exact against a Python model the way
+  `c/lpcsynth` is against `tools/lpc_codec.py`. Then the CMU kal diphone table on top.
+- **State:** the MAX98357A works; three fixes, all in `c/phrasecheck` (`docs/hookup.md`). The Toit firmware needs
+  the same three (ztoit board files). Speech decisions and listening results: the 2026-11-24 addenda in
+  `docs/design/2026-11-23-on-board-speech-sketch.md`.
+- **Awaiting David:** nothing.
+- **Bench:** XIAO cd2e runs `build-ktau-pcmplay` and speaks at every boot (`~/workspace/board-alloc.md`).
 - **Build/flash:** see CLAUDE.md; apps under `c/` build with `west build -b xiao_nrf54l15/nrf54l15/cpuapp -d ~/zephyr-4.5/build-ktau-<name> c/<name>`.
-- **Open:** #1, #2, #4, #5 (P3); #6. Unexplained: one CPU fault (stack corrupted, near printk state) during an I2S run.
-- **Decided:** the on-board LPC speech sketch (2026-11-23, design doc addendum): 8 kHz order 10 natural pitch;
-  server sends phonemes + duration + pitch; canned phrases offline; ztoit #53 no longer blocks the reply.
-  Hookup pins: BCLK D0/P1.04, DIN D1/P1.05, LRC D5/P1.11 (may change if these pins cannot clock I2S).
+  `c/*/phrases/` and `c/*/clips/` are git-ignored (TTS-derived audio); each `CMakeLists.txt` says how to make them.
+- **Open:** #1, #2, #4, #5, #7 (P3); #6.
+- **Decided (2026-11-24, sketch addenda):** unlimited phrases, not canned; the phoneme path uses residual-excited
+  LPC at 8 kHz order 10, not plain LPC; diphones from CMU kal (keep CMU's notice); LC3 16 kbit/s is the measured
+  option for any canned speech; no audio from the Piper lessac voice in the public repo.
+- **Decided (2026-11-23):** server sends phonemes + duration + pitch. Pins: `docs/hookup.md`.

@@ -1,0 +1,25 @@
+/* MAX98357A on I2S20 (port P1 only): BCLK D0 = P1.04 and LRC D5 = P1.11 are dedicated clock pins,
+ * DIN D1 = P1.05 sits next to BCLK. Hookup: docs/hookup.md. */
+&pinctrl {
+	i2s20_default: i2s20_default {
+		group1 {
+			psels = <NRF_PSEL(I2S_SCK_M, 1, 4)>,
+				<NRF_PSEL(I2S_LRCK_M, 1, 11)>,
+				<NRF_PSEL(I2S_SDOUT, 1, 5)>;
+		};
+	};
+};
+
+&i2s20 {
+	status = "okay";
+	pinctrl-0 = <&i2s20_default>;
+	pinctrl-names = "default";
+	/* The board dtsi picks "PCLK32M" (internal RC). The MAX98357A times everything from BCLK. */
+	clock-source = "PCLK32M_HFXO";
+};
+
+/* The board enables i2c22 on D4/D5 (P1.10/P1.11). TWIM22 then owns P1.11 and I2S20 cannot clock LRCK there:
+ * it stalls after one buffer (docs/hookup.md). */
+&i2c22 {
+	status = "disabled";
+};

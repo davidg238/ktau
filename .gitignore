@@ -2,3 +2,5 @@
 .private/
 samples/
 __pycache__/
+c/*/phrases/
+c/*/clips/

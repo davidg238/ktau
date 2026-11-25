@@ -1,6 +1,6 @@
 /* ktau #6: does I2S20 on the XIAO nRF54L15 advance buffers when driven by its registers alone?
- * Zephyr's driver stalled after the first buffer (2026-11-23). This polls the events directly, no interrupts,
- * no I2S driver. Silent: the buffers are zeros. Each pin set runs for 1 s. */
+ * Zephyr's driver stalled after the first buffer (2026-11-23): i2c22 owned P1.11, see boards/ and
+ * docs/hookup.md. This polls the events directly, no interrupts, no I2S driver. Silent: the buffers are zeros. Each pin set runs for 1 s. */
 #include <string.h>
 #include <zephyr/kernel.h>
 #include <nrfx.h>
@@ -66,7 +66,7 @@ static void run(const char *name, int sck, int lrck, int sdout) {
   r->TASKS_STOP = 1;
   k_msleep(5);
   printk("i2sbare: %s (SCK P1.%02d LRCK P1.%02d SDOUT P1.%02d): TXPTRUPD %d in 1 s (expect ~50), "
-         "FRAMESTART %d (expect ~16000), STOPPED %u\n",
+         "FRAMESTART %d (one per buffer), STOPPED %u\n",
          name, sck, lrck, sdout, updates, frames, r->EVENTS_STOPPED);
   printk("i2sbare: %s: BUSERRORADDRESS ch0 %08x ch1 %08x, TXD.PTR %08x, buf %p/%p\n", name,
          r->CHANNEL[0].BUSERRORADDRESS, r->CHANNEL[1].BUSERRORADDRESS, r->TXD.PTR, buf[0], buf[1]);
@@ -76,8 +76,22 @@ static void run(const char *name, int sck, int lrck, int sdout) {
   printk("i2sbare: %s: RX sink words written %d of %d\n", name, touched, FRAMES);
 }
 
+/* Drive each pin high then low and read the pad back: a pin something external holds will not follow. */
+static void probe(int pin) {
+  pin_out(pin);
+  NRF_P1->OUTSET = 1u << pin;
+  k_busy_wait(1000);
+  int hi = (NRF_P1->IN >> pin) & 1;
+  NRF_P1->OUTCLR = 1u << pin;
+  k_busy_wait(1000);
+  int lo = (NRF_P1->IN >> pin) & 1;
+  printk("i2sbare: probe P1.%02d: driven high reads %d, driven low reads %d\n", pin, hi, lo);
+}
+
 int main(void) {
   k_msleep(500);
+  static const int pins[] = {4, 5, 6, 7, 10, 11, 12};
+  for (int i = 0; i < 7; i++) probe(pins[i]);
 #ifdef CLOCKS_ON
   NRF_CLOCK->EVENTS_XOSTARTED = 0;
   NRF_CLOCK->TASKS_XOSTART = 1;
@@ -89,6 +103,9 @@ int main(void) {
 #endif
   run("ours", 4, 11, 6);      /* D0, D5; data to D2, unwired */
   run("upstream", 11, 12, 6); /* Zephyr's i2s tests' clock pins */
+  run("free", 6, 7, 10);      /* D2, D3, D4: nothing wired to any of them */
+  run("free-sck", 6, 11, 10); /* only SCK moved off the amp */
+  run("free-lrck", 4, 7, 10); /* only LRCK moved off the amp */
   printk("i2sbare: done\n");
   return 0;
 }

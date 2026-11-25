@@ -16,13 +16,26 @@ For on-board speech (#6, S2). Module: `max98357a.png`; bench as wired 2026-11-23
 Taken on the board: P1.12/P1.13 (PDM mic), P1.08/P1.09 (console UART), P0.03/P0.04 (IMU, `i2c30`). D4/D5 are
 Zephyr's default I2C pins but ktau does not use them.
 
-## Status (2026-11-23): I2S does not run yet
+## Status (2026-11-24): works — clean speech heard
 
-- **Keep Vin unplugged while debugging.** With clocks but no valid data the amp plays loud noise; the sample
-  amplitude does not control it.
-- `c/tonecheck` (Zephyr I2S driver) and `c/i2sbare` (registers only, no driver) both stall after the first
-  buffer: one TXPTRUPD, then none. On D0/D5 no frame ever starts; on P1.11/P1.12 exactly one does. No EasyDMA
-  bus error. Not changed by: clock source, 8 vs 16 kHz, HFXO + PLL held on, clock-pin input buffers connected.
-- Next lead: the MCKFREQ value (`MCKFREQ_512K` in `c/i2sbare/src/main.c`) uses the driver's formula; the
-  datasheet gives the equation only as a figure (Figure 66), unverified. Then the nRF54L15 errata in full.
-- Logs: `samples/tonecheck-2026-11-23.log`, `samples/i2sbare-2026-11-23.log` (git-ignored).
+Three things were wrong; each fix is in `c/phrasecheck` (the reference) and its overlay.
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| I2S stalls after one buffer | the board dtsi enables `i2c22` on D4/D5, so TWIM22 owned P1.11 (LRC) | `&i2c22 { status = "disabled"; }` |
+| tone and speech poor on some boots, clean on others | the board dtsi sets `clock-source = "PCLK32M"` (internal RC); the amp times everything from BCLK | `clock-source = "PCLK32M_HFXO"` |
+| speech poor at 8 kHz even on the crystal (a 440 Hz tone was clean) | not pinned down. At 8 kHz the driver's MCKFREQ is below `I2S_CONFIG_MCKFREQ_MCKFREQ_Min` and nrfx does not check it | run I2S at 16 kHz, each synth sample interpolated once |
+
+- **Evidence, stall:** `c/i2sbare` went from 1 to 51 TXPTRUPD/s on every pin set with only `i2c22` disabled; with
+  it enabled, exactly the pin sets with a clock on P1.11 stalled, and the pad read 1 while GPIO drove it 0.
+- **Evidence, sound (David's ears, one boot each):** RC clock: 8 kHz tone, 8 kHz speech and 16 kHz speech all poor.
+  Crystal: 8 kHz tone clean, 8 kHz speech poor, 16 kHz speech good. Crystal + 16 kHz, all three canned phrases:
+  "a little robotic, but quite clean". On the RC clock a 16 kHz tone was ugly once and clean three times.
+- Level: 9 dB gain, Vin on 3V3, samples shifted right by `QUIETER`: a good bench volume.
+- Not the cause of anything: MCKFREQ at 16 kHz, sample rate (for the stall), input buffers, dedicated clock pins
+  (D2/D3 clock I2S fine), the amp.
+- The Toit firmware needs all three (ztoit board files / the speech primitive).
+- Unexplained: a `Halting system` on the first `tonecheck` boot of the day; and twice a flash completed but the
+  board printed nothing until reflashed. A faint "twang" ended each clip on the RC-clock run; not asked about since.
+- Logs (git-ignored): `samples/i2sbare-2026-11-24.log`, `samples/tonecheck-2026-11-24.log`,
+  `samples/phrasecheck-2026-11-24.log`.

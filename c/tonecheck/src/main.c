@@ -51,7 +51,7 @@ int main(void) {
       .word_size = 16,
       .channels = 2,
       .format = I2S_FMT_DATA_FORMAT_I2S,
-      .options = I2S_OPT_BIT_CLK_MASTER | I2S_OPT_FRAME_CLK_MASTER,
+      .options = I2S_OPT_BIT_CLK_CONTROLLER | I2S_OPT_FRAME_CLK_CONTROLLER,
       .frame_clk_freq = RATE,
       .mem_slab = &tx_slab,
       .block_size = BLOCK_BYTES,
@@ -77,10 +77,6 @@ int main(void) {
   report("before start");
   err = i2s_trigger(i2s, I2S_DIR_TX, I2S_TRIGGER_START);
   printk("tonecheck: start %d\n", err);
-  for (int t = 0; t < 5; t++) {
-    k_msleep(5);
-    report("5 ms");
-  }
 
   int64_t end = k_uptime_get() + 3000;
   uint32_t written = 2;

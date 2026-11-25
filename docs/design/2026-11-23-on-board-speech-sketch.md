@@ -84,7 +84,7 @@ sleepy defaults, so speech replies no longer need ztoit #53's rx-on. Phonemes in
 | S1 | Host: `lpc_reference.py` (done, the samples above) |
 | S1b | Host (done): the frame format in `tools/lpc_codec.py` (55 bits a frame, ~300 B a second); the integer synth `c/lpcsynth/` matches its Python model sample for sample (`tools/test_lpc_codec.py`); `lpc_codec.py phrase` makes canned phrases |
 | S2 | Board: a canned LPC phrase in flash ("can't reach the server") plays through I2S and the MAX98357A; the C primitive measured. This alone is the offline mode |
-| S2 status | Blocked 2026-11-23: I2S20 stalls after the first buffer (driver and bare registers); see `docs/hookup.md` |
+| S2 status | Done on the bench 2026-11-24: `c/phrasecheck` plays the three canned phrases from flash (312–711 B each); David: "a little robotic, but quite clean". The synth costs about 46 ms of CPU a second of speech. I2S must run at 16 kHz on the crystal with `i2c22` disabled (`docs/hookup.md`). Still to do: the Toit primitive (ztoit) |
 | S3 | Host: diphone table built from the source voice; a host synth speaks phoneme strings (tune the joins here) |
 | S4 | Board: phonemes + duration + pitch from the server over Thread → speech |
 | S5 | Only if needed: free text with no server (on-board lexicon, letter-to-sound, rule prosody) |
@@ -95,3 +95,61 @@ sleepy defaults, so speech replies no longer need ztoit #53's rx-on. Phonemes in
 - Joins: interpolate log-area ratios or line spectral pairs across a boundary; LSPs interpolate more safely.
 - Cheap quality steps if wanted: mixed excitation (a voicing decision per band, as MELP does). Not a shaped glottal pulse: the LPC filter already carries the tilt, and adding it twice muffled the first samples.
 - I2S on the XIAO's pins (#6's unchecked list).
+
+## Addendum 2026-11-24: LC3 heard next to LPC on the board
+
+`c/lc3play` plays "I can't reach the server" three ways through the MAX98357A, level-matched, same TTS source.
+
+| Version | Blob | CPU a second of speech | Worst 20 ms block | David, three listens |
+|---|---|---|---|---|
+| LPC (this sketch) | 438 B | 47 ms | 1.0 ms | "a little robotic, but quite clean" |
+| LC3 16 kbit/s | 3120 B | 49 ms | 1.2 ms | "very good" |
+| LC3 32 kbit/s | 6240 B | 54 ms | 1.3 ms | "very good", not told apart from 16 |
+
+- LC3 costs no more CPU than LPC; the price is size, 2 KB a second at 16 kbit/s against about 0.3 KB.
+- Proposed, not yet decided: canned phrases as LC3 at 16 kbit/s (50 phrases of 2 s ≈ 200 KB). LC3 cannot serve
+  the phoneme path (no pitch or duration to control); for S3 compare waveform or residual-excited diphones with
+  plain LPC by ear before choosing.
+- Log: `samples/lc3play-2026-11-24.log`; host copies, with a 24 kbit/s one and the original, in
+  `samples/lc3-phrases-2026-11-24/` (both git-ignored).
+
+## Addendum 2026-11-24: residual-excited LPC heard on the board
+
+David wants unlimited phrases, so the phoneme path has to sound better than plain LPC. `tools/relp_reference.py`
+keeps the LPC filter and plays the voice's own residual through it (3 bits a sample, a gain per 10 ms);
+`c/pcmplay` plays its clips through the MAX98357A.
+
+| Clip | Stored size | David |
+|---|---|---|
+| 1 plain LPC, 8 kHz order 10 | 0.3 KB a second | baseline |
+| 2 residual-excited, 8 kHz order 10 | 3.7 KB a second | |
+| 3 residual-excited, 16 kHz order 16 | 6.7 KB a second | "the best" |
+| 4 clip 3 with pitch ×1.15, duration ×1.2 (overlap-add of the residual) | as 3 | |
+
+- David's ear, three listens: clip 3 best; clip 2 "90+%" of clip 3; clip 4 "85%" of clip 3.
+- **Decided (David, 2026-11-24): the demo starts from clip 2** — residual-excited LPC at 8 kHz, order 10, 3 bits a
+  sample. It replaces plain LPC as the synth for the phoneme path. The demo uses standard modules; it is not
+  tuned for the best voice.
+- **For the write-up:** say how to improve it and let readers hear what a little flash buys: publish clips 1 to 4
+  side by side with their sizes (plain LPC 0.3, 8 kHz residual 3.7, 16 kHz residual 6.7 KB a second), and the
+  LC3 clips above for canned speech. Check the TTS voice's licence before publishing any clip.
+- Cost: a diphone set of about 3 minutes is roughly 0.7 MB at clip 2's rate, 1.2 MB at clip 3's; the chip has
+  1524 KB in all. Untried: 2 bits a sample, a decimated residual.
+- Open: the diphone source and its licence (above); how joins sound; the price of moving pitch at 8 kHz (clip 4
+  was made at 16 kHz).
+- Next: a frame format and an integer C synth for clip 2, checked against the Python model as `c/lpcsynth` is.
+
+## Addendum 2026-11-24: diphone voice licences (first look, not legal advice)
+
+| Source | Terms as found | For a public repo |
+|---|---|---|
+| CMU kal diphones, as shipped in Flite | Flite's CMU licence: use, modify, distribute and sell, keeping the copyright notice and authors' names, marking modifications (`/usr/share/doc/libflite1/copyright`, kal is not among its exceptions) | usable, with the notice |
+| Pieces cut from the TTS voice in use (Piper `en_US-lessac-medium`) | the voice is trained on the Blizzard 2013 Lessac data, reported as research / non-commercial; the dataset licence text itself was not read | no: cutting the output into diphones does not change whose voice it is |
+| Pieces cut from Piper `en_US-ljspeech` | model card: LJ Speech, public domain | usable; a different, female voice; not installed here |
+| David's own recording | his | usable |
+
+- Heard on the board (`c/pcmplay`): Flite speaking the test phrase with kal at 8 and at 16 kHz, after our 8 kHz
+  residual clip. Flite's kal is itself a residual-excited LPC diphone synth, so it previews the technique with
+  its joins. Clips: `samples/kal-2026-11-24/`.
+- **Decided (David, 2026-11-24): build the diphones from CMU kal.** Heard three times on the board: "fine for a
+  limited flash demo". Keep CMU's copyright notice and authors' names with anything derived from it.
