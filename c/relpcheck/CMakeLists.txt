@@ -1,0 +1,22 @@
+cmake_minimum_required(VERSION 3.20.0)
+find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+project(relpcheck)
+target_sources(app PRIVATE src/main.c ../relpsynth/relp_synth.c)
+target_include_directories(app PRIVATE ../relpsynth ../lpcsynth)
+# Plays every clips/*.relp in name order. clips/ is git-ignored (audio derived from a TTS voice). Make one from
+# any 8 kHz mono 16-bit wav:
+#   sox <speech.wav> -r 8000 -c 1 -b 16 8k.wav && tools/relp_codec.py encode 8k.wav c/relpcheck/clips/<name>.relp
+set(gen ${ZEPHYR_BINARY_DIR}/include/generated)
+file(GLOB clips CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/clips/*.relp)
+list(SORT clips)
+set(decls "")
+set(table "")
+set(i 0)
+foreach(clip ${clips})
+  get_filename_component(name ${clip} NAME_WLE)
+  generate_inc_file_for_target(app ${clip} ${gen}/clip${i}.inc)
+  string(APPEND decls "static const uint8_t clip${i}[] = {\n#include <clip${i}.inc>\n};\n")
+  string(APPEND table "  {\"${name}\", clip${i}, sizeof clip${i}},\n")
+  math(EXPR i "${i} + 1")
+endforeach()
+file(WRITE ${gen}/clips.h "${decls}static const struct clip clips[] = {\n${table}};\n")

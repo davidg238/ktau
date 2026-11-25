@@ -153,3 +153,61 @@ keeps the LPC filter and plays the voice's own residual through it (3 bits a sam
   its joins. Clips: `samples/kal-2026-11-24/`.
 - **Decided (David, 2026-11-24): build the diphones from CMU kal.** Heard three times on the board: "fine for a
   limited flash demo". Keep CMU's copyright notice and authors' names with anything derived from it.
+
+## Addendum 2026-11-24: the residual-excited format and its integer synth
+
+Clip 2 made into a format: `tools/relp_codec.py` (encoder and integer model), `c/relpsynth` (the board synth),
+`c/relpcheck` (plays `clips/*.relp` from flash). The module docstring of `relp_codec.py` is the format's record.
+
+- **The rule:** the filter of `lpc_codec.py` (same order, same coefficient tables) once per `HOP`, then one
+  `RES_BITS` code per sample scaled by a gain per hop. No pitch field, no interpolation, no pre-emphasis: as the
+  reference clip. `FRAME_BYTES` per hop gives 3.7 KB a second, the reference's estimate.
+- **The encoder inverts the synth's own lattice**, state and all, so the two stay exact inverses when the
+  coefficients change at a frame edge; only the residual quantiser adds error.
+- **Checked:** `tools/test_relp_codec.py` — C equals the model sample for sample, on random frames and when
+  clipping, built with the address sanitiser on a blob of exact size (both guards seen to fail when the C is broken).
+- **Measured on one Piper phrase (3.4 s):** SNR 11.5 dB overall, 12.7 dB segmental, against 12.0 and 12.9 for the
+  floating-point reference clip. k1 sits at the end of its table in 70 of 342 frames: the table was laid out for
+  pre-emphasised speech. Left alone until an ear says otherwise.
+- **On the board:** the synth costs about 28 ms of CPU a second of speech (`samples/relpcheck-2026-11-24.log`),
+  against 46 for plain LPC, which interpolates every coefficient every sample. Not yet heard by David.
+- **Assumed, not yet tested:** a diphone unit is a run of whole frames; pitch marks and unit boundaries will live
+  in the diphone table, not in the frame.
+
+## Addendum 2026-11-24: a kal diphone voice in the residual-excited format
+
+`tools/kal_diphones.py` builds a diphone table from CMU kal as shipped in Flite and renders phones with an integer
+model (`plan` + `render`), the specification for a C port. Its module docstring is the record of the table and
+wire formats.
+
+- **The rule:** each kal diphone is played as recorded through Flite's own filter and re-encoded with
+  `relp_codec.encode`; kal's pitch periods are kept as the pitch marks. At synthesis, as in Flite's
+  `diphone_synth`: diphone a-b plays its first half over the end of a and its second half over the start of b;
+  each target period takes the source period nearest its proportional place, centred, truncated or zero-padded;
+  each residual sample plays with the gain and filter of the frame it came from.
+- **Decided (David, 2026-11-24): the wire is `WIRE_BYTES` a phone** — phone index, duration in ms, f0 in Hz at the
+  phone's midpoint, linear between midpoints.
+- **Decided (David, 2026-11-24): a pair the table lacks plays as a, a pause of `PAUSE_MS`, b — "for now".** 97
+  pairs are lacking (among them pau-ng, hh-pau, w-pau, y-pau; then pau-pau stands in). `plan` reports each substitution.
+  `PAUSE_MS` is a guess (about the shortest phone Flite made in the test sentence), not heard.
+- **Decided (David, 2026-11-24): the copyright ships.** `licenses/flite-copyright` is Debian's copy of Flite's
+  notice; `build` writes it beside every table as `<name>.COPYING`, marked as a modification.
+- **Assumed:** plain a-b diphones only (Flite's 38 cluster diphones need syllable structure the wire does not
+  carry); the lattice state runs on across joins with no smoothing; pitch moves in whole-sample periods.
+- **Costs:** the table is 780 KB of the chip's 1524 KB: 1584 diphones, 20,732 frames, 18,484 period marks.
+- **Measured:** our reading of kal against Flite's own output, 36 dB on the test sentence. The codec costs 10.3 dB
+  SNR (12.4 segmental) on diphones as recorded, 9.5 dB on the test sentence once pitch and duration move; k1 is at
+  the end of its table in 22% of frames. Render as recorded equals `relp_codec.synthesise` sample for sample
+  (`tools/test_kal_diphones.py`).
+- **On the board (`c/pcmplay`, `samples/pcmplay-kal-diphones-2026-11-24.log`):** Flite's kal, kal's data by our
+  rule, our table by our rule, played in that order.
+- **Decided (David, 2026-11-24): the voice is our table (clip 3).** Clips 2 and 3 are "both fine", so the cheaper
+  one wins: 780 KB against kal's 1245 KB as Flite stores it.
+- **The C port:** `c/kalsynth`, equal to `plan` + `render` sample for sample (`tools/test_kal_diphones.py`), reads
+  the table in place from flash; its state is 216 B. `c/kalcheck` on the board spoke the test sentence from 180
+  wire bytes at about 36 ms of CPU a second of speech (`samples/kalcheck-2026-11-24.log`).
+- **Decided (David, 2026-11-24): stay at 3 bits a sample until the flash is needed; 2 bits is adequate.** Heard
+  on the board three times next to the 3-bit clip: "maybe 90%" of it. At 2 bits the table is 577 KB (780 at 3)
+  and the codec's SNR on the test sentence is 5.9 dB (9.5 at 3). A host trial only (`relp_reference.BITS` set to
+  2 before `relp_codec` is imported); the C synth has not run at 2 bits.
+- **Open:** join smoothing; how a substituted pause sounds; a decimated residual; k1's table range.
