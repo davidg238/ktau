@@ -179,3 +179,13 @@ Decided by David at the bench; the record of the day is `docs/journal/08-spoken-
   moving it onto the tailnet was looked at and left.
 - **A clip is at most 30 s** (`MAX-BLOCKS`; `MAX_BLOCKS` is the server's guard).
 - **A fatal error restarts the board** (`CONFIG_RESET_ON_FATAL_ERROR`), a workaround for #7, not a fix.
+
+## Addendum, 2026-11-27: ktau stays the simple demo
+
+Decided by David.
+
+- **ktau stops at rung 8 as the public demo.** Streamed replies with no word cap, and a better diphone voice
+  (3 bits or 16 kHz, which needs external flash or an nRF54LM20), go to a private follow-on product repo. The
+  15-word, one-datagram reply above stands for ktau.
+- **ktau follows ztoit's rename** of the fork's `zephyr` module to `ztoit` (`import ztoit`) once it is on the
+  fork's `zephyr-port` branch: 8 apps change, `tools/fork-sdk.sh` is rerun, every image is rebuilt.
